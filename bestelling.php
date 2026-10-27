@@ -176,6 +176,10 @@ function verrijkTafel($t) {
     $t['drank_inbegrepen'] = pakketInfo($t['pakket'])['drank'];
     $t['seconden_over'] = $t['eind_tijd'] ? (strtotime($t['eind_tijd']) - time()) : null;
     $t['eind_tijd_kort'] = $t['eind_tijd'] ? date('H:i', strtotime($t['eind_tijd'])) : null;
+    // Tot wanneer mogen er gerechten besteld worden? (na "alleen drankjes verlengen" eerder dan de eindtijd)
+    $etenTot = ($t['eten_tot'] ?? null) ?: $t['eind_tijd'];
+    $t['eten_tot_kort'] = $etenTot ? date('H:i', strtotime($etenTot)) : null;
+    $t['eten_seconden_over'] = $etenTot ? (strtotime($etenTot) - time()) : null;
     $t['laatste_activiteit_kort'] = $t['laatste_activiteit'] ? date('H:i', strtotime($t['laatste_activiteit'])) : null;
     $t['ronde'] = rondeInfo($t);
     $t['oproep_tijd_kort'] = !empty($t['oproep_tijd']) ? date('H:i', strtotime($t['oproep_tijd'])) : null;
@@ -194,27 +198,50 @@ function verrijkBestelling($rij) {
 }
 
 // Afgeronde tafel bewaren in het archief (voor omzet en statistieken)
+// Wie heeft wat gedaan bij deze tafel? (uit de bestellingen, voordat die worden verwijderd)
+function medewerkersVanTafel($t, $status, $door) {
+    $rijen = alleRijen(q("SELECT afdeling, chef_naam, serveerster_naam FROM bestellingen WHERE tafel = ?", "i", [intval($t['tafel'])]));
+    $lijst = function ($veld, $afdeling = null) use ($rijen) {
+        $namen = [];
+        foreach ($rijen as $r) {
+            if ($afdeling !== null && ($r['afdeling'] ?: 'keuken') !== $afdeling) continue;
+            if ($r[$veld] !== '' && !in_array($r[$veld], $namen, true)) $namen[] = $r[$veld];
+        }
+        return $namen;
+    };
+    return array_filter([
+        'keuken'   => $lijst('chef_naam', 'keuken'),
+        'bar'      => $lijst('chef_naam', 'bar'),
+        'gebracht' => $lijst('serveerster_naam'),
+        'geholpen' => array_values(array_filter(array_map('trim', explode(',', $t['geholpen_door'] ?? '')))),
+        'betaling' => ($status === 'betaald' && ($t['geaccepteerd_door'] ?? '') !== '') ? [$t['geaccepteerd_door']] : [],
+        'afgerond' => $door !== '' ? [$door] : [],
+    ]);
+}
+
 // 'totaal' = omzet van eten en drinken (na korting). Cadeaubonnen staan in aparte kolommen.
 function archiveer($t, $status, $door, $betaalmethode, $bonStatus = '', $rek = null) {
     $rek = $rek ?? berekenRekening($t);
     $betaald = $status === 'betaald';
-    q("INSERT INTO archief (tafel, gast_naam, pakket, volw, sen, kind, verlengingen, drank_kosten, totaal,
+    q("INSERT INTO archief (tafel, gast_naam, pakket, volw, sen, kind, verlengingen, verlengingen_drank, drank_kosten, totaal,
                             betaalmethode, status, afgerond_door, start_tijd, afgerond_op, bon_keuze, bon_status,
-                            kortingscode, korting, cadeau_ingezet, cadeau_verkocht)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?)",
-      "issiiiiddsssssssddd",
+                            kortingscode, korting, cadeau_ingezet, cadeau_verkocht, medewerkers)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?)",
+      "issiiiiiddsssssssddds",
       [intval($t['tafel']), $t['gast_naam'], $t['pakket'], intval($t['volw']), intval($t['sen']), intval($t['kind']),
-       intval($t['verlengingen']), floatval($t['drank_kosten']), $rek['omzet'],
+       intval($t['verlengingen']), intval($t['verlengingen_drank'] ?? 0), floatval($t['drank_kosten']), $rek['omzet'],
        $betaalmethode, $status, $door, $t['start_tijd'], $t['bon_keuze'] ?? '', $bonStatus,
        $betaald ? $rek['kortingscode'] : '', $betaald ? $rek['korting'] : 0,
-       $betaald ? $rek['cadeau_ingezet'] : 0, $betaald ? $rek['cadeau_verkocht'] : 0]);
+       $betaald ? $rek['cadeau_ingezet'] : 0, $betaald ? $rek['cadeau_verkocht'] : 0,
+       mb_substr(json_encode(medewerkersVanTafel($t, $status, $door), JSON_UNESCAPED_UNICODE), 0, 1000)]);
 }
 
 // Na betaling: kortingscode tellen, cadeaubon afboeken en nieuw gekochte cadeaubonnen geldig maken.
 // Zonder betaling (gasten vertrokken): nieuw gekochte bonnen vervallen.
 function verwerkCadeauEnKorting($t, $rek, $betaald) {
     $sessie = $t['sessie'] ?? '';
-    if (!$betaald) {
+    if (!$betaald || !kortingFunctieAan()) {
+        // Niet betaald, of de functie staat uit: nieuw gekochte bonnen vervallen (ze stonden ook niet op de rekening)
         if ($sessie !== '') q("DELETE FROM cadeaubonnen WHERE status = 'open' AND tafel_sessie = ?", "s", [$sessie]);
         return;
     }
@@ -231,11 +258,13 @@ function verwerkCadeauEnKorting($t, $rek, $betaald) {
 }
 
 // Tafel afsluiten: archiveren, bestellingen en tafel verwijderen
-function sluitTafel($t, $status, $door, $betaalmethode, $bonStatus = '') {
+function sluitTafel($t, $status, $door, $betaalmethode, $bonStatus = '', $altijdBewaren = false) {
     $rek = berekenRekening($t);
     verwerkCadeauEnKorting($t, $rek, $status === 'betaald');
-    // Een tafel die nooit heeft besteld en vertrokken is, hoeft niet in de statistieken
-    if ($status === 'betaald' || $t['start_tijd'] !== null) {
+    // Bewaren in het archief (statistieken): bij betalen, als er besteld is, of als de serveerster zelf
+    // "vertrokken zonder betalen" kiest. Alleen een automatisch opgeruimde tafel zonder bestellingen
+    // (bijv. iemand scande de QR-code en ging weer weg) telt niet mee.
+    if ($status === 'betaald' || $t['start_tijd'] !== null || $altijdBewaren) {
         archiveer($t, $status, $door, $betaalmethode, $bonStatus, $rek);
     }
     q("DELETE FROM bestellingen WHERE tafel = ?", "i", [intval($t['tafel'])]);
@@ -282,6 +311,10 @@ try {
                 'ronde_minuten' => intval(instelling('ronde_minuten', 10)),
                 'allergenen' => ALLERGENEN,
                 'categorieen' => CATEGORIEEN,
+                'korting_aan' => kortingFunctieAan(),
+                'verleng_aan' => instelling('verleng_aan', '1') === '1',
+                'verleng_keuzes' => verlengKeuzes(),
+                'verleng_prijs_drank_pp' => floatval(instelling('verleng_prijs_drank_pp', 3)),
             ]);
         }
 
@@ -389,7 +422,16 @@ try {
                                        start_tijd, eind_tijd, verlengingen, drank_kosten, betaalmethode, geaccepteerd_door, laatste_activiteit, sessie)
                    VALUES (?, 'bezet', ?, ?, ?, ?, ?, ?, NULL, NULL, 0, 0, '', '', NOW(), ?)",
                   "isssiiis", [$tafel, $gastNaam, $gezelschap, $pakket, $volw, $sen, $kind, $sessie]);
-                stuur(["succes" => true, "sessie" => $sessie]);
+                // Heeft deze gast gereserveerd? Dan staat de reservering meteen op 'aangekomen'
+                $res = koppelReserveringBijAankomst($tafel, $gastNaam);
+                $uit = ["succes" => true, "sessie" => $sessie];
+                if ($res) {
+                    $tafels = resTafels($res);
+                    $uit['reservering'] = ['nummer' => 'R-' . str_pad((string)intval($res['id']), 4, '0', STR_PAD_LEFT),
+                                           'tijd' => date('H:i', strtotime($res['start_tijd'])),
+                                           'andere_tafel' => !in_array($tafel, $tafels, true), 'tafels' => implode(' + ', $tafels)];
+                }
+                stuur($uit);
             }
 
             // De tafel is al in gebruik door een ander bezoek: niet overschrijven, maar aanbieden om aan te sluiten
@@ -466,7 +508,7 @@ try {
                         $bonStatus = 'papier';
                     }
                 }
-                sluitTafel($huidig, $reden, $medewerkerNaam ?: 'Personeel', $betaalmethode, $bonStatus);
+                sluitTafel($huidig, $reden, $medewerkerNaam ?: 'Personeel', $betaalmethode, $bonStatus, true);
                 stuur(["succes" => true, "bon" => $bon]);
             }
             stuur(["succes" => true]);
@@ -500,10 +542,24 @@ try {
         vereisSessie($t, $input);
         if ($t['status'] !== 'bezet') fout("Deze tafel is niet in gebruik.");
         if ($t['eind_tijd'] === null) fout("Jullie tijd start pas bij de eerste bestelling.");
+        if (instelling('verleng_aan', '1') !== '1') fout("Tijd verlengen is op dit moment niet mogelijk. Vraag het personeel.");
 
-        q("UPDATE tafels SET eind_tijd = DATE_ADD(GREATEST(eind_tijd, NOW()), INTERVAL ? MINUTE),
-                             verlengingen = verlengingen + 1, laatste_activiteit = NOW() WHERE tafel = ?",
-          "ii", [intval(instelling('verleng_minuten', 30)), $tafel]);
+        $minuten = intval($input['minuten'] ?? 0);
+        if (!in_array($minuten, verlengKeuzes(), true)) fout("Kies hoe lang jullie willen verlengen.");
+        if (($input['soort'] ?? 'alles') === 'drank') {
+            // Alleen drankjes: de tijd voor gerechten blijft staan, de tijd voor drankjes gaat verder
+            q("UPDATE tafels SET eten_tot = COALESCE(eten_tot, eind_tijd),
+                                 eind_tijd = DATE_ADD(GREATEST(eind_tijd, NOW()), INTERVAL ? MINUTE),
+                                 verleng_min_drank = (CASE WHEN verleng_min_drank = 0 THEN verlengingen_drank * ? ELSE verleng_min_drank END) + ?,
+                                 verlengingen_drank = verlengingen_drank + 1, laatste_activiteit = NOW() WHERE tafel = ?",
+              "iiii", [$minuten, intval(instelling('verleng_minuten', 30)), $minuten, $tafel]);
+        } else {
+            // Eten + drinken: alles verlengd (gerechten mogen weer tot de nieuwe eindtijd)
+            q("UPDATE tafels SET eind_tijd = DATE_ADD(GREATEST(eind_tijd, NOW()), INTERVAL ? MINUTE), eten_tot = NULL,
+                                 verleng_min_alles = (CASE WHEN verleng_min_alles = 0 THEN verlengingen * ? ELSE verleng_min_alles END) + ?,
+                                 verlengingen = verlengingen + 1, laatste_activiteit = NOW() WHERE tafel = ?",
+              "iiii", [$minuten, intval(instelling('verleng_minuten', 30)), $minuten, $tafel]);
+        }
         stuur(["succes" => true, "tafel" => verrijkTafel(haalTafel($tafel))]);
     }
 
@@ -516,13 +572,14 @@ try {
         $sterren = intval($input['sterren'] ?? 0);
         if ($sterren < 1 || $sterren > 5) fout("Kies 1 tot 5 sterren.");
         $tekst = mb_substr(trim($input['tekst'] ?? ''), 0, 300);
+        $reviewNaam = mb_substr(trim((string)($input['naam'] ?? '')), 0, 60);   // leeg = anoniem
 
         $bezoek = q("SELECT id FROM archief WHERE tafel = ? AND status = 'betaald' AND beoordeling IS NULL
                      AND afgerond_op > (NOW() - INTERVAL 30 MINUTE) ORDER BY afgerond_op DESC LIMIT 1",
                     "i", [$tafel])->fetch_assoc();
         if (!$bezoek) fout("Er is geen recent bezoek gevonden om te beoordelen.");
-        q("UPDATE archief SET beoordeling = ?, review_tekst = ?, review_op = NOW() WHERE id = ?",
-          "isi", [$sterren, $tekst, intval($bezoek['id'])]);
+        q("UPDATE archief SET beoordeling = ?, review_tekst = ?, review_naam = ?, review_op = NOW() WHERE id = ?",
+          "issi", [$sterren, $tekst, $reviewNaam, intval($bezoek['id'])]);
         stuur(["succes" => true]);
     }
 
@@ -533,6 +590,7 @@ try {
         $t = haalTafel($tafel);
         if (!$t) stuur(["succes" => false, "code" => "sessie_verlopen", "melding" => "Jullie bezoek aan deze tafel is afgesloten. Meld je opnieuw aan."]);
         vereisSessie($t, $input);
+        if (!kortingFunctieAan()) fout("Kortingscodes en cadeaubonnen zijn op dit moment niet beschikbaar.");
         if ($t['status'] !== 'bezet') fout("Jullie hebben de rekening al gevraagd. Vraag de serveerster als je nog iets wilt veranderen.");
 
         if ($actie === 'code_verwijderen') {
@@ -630,8 +688,12 @@ try {
         $t = haalTafel($tafel);
         if (!$t || $t['oproep_status'] === '') fout("Deze oproep bestaat niet meer (misschien geannuleerd door de gast).");
         if ($t['oproep_status'] === 'geaccepteerd') fout("Deze oproep is al geaccepteerd door " . $t['oproep_door'] . ".");
-        q("UPDATE tafels SET oproep_status='geaccepteerd', oproep_door=? WHERE tafel=?",
-          "si", [$medewerkerNaam ?: 'Een serveerster', $tafel]);
+        $wie = $medewerkerNaam ?: 'Een serveerster';
+        // Onthouden wie deze tafel heeft geholpen (komt later in "Laatst afgesloten tafels")
+        $geholpen = array_filter(array_map('trim', explode(',', $t['geholpen_door'] ?? '')));
+        if (!in_array($wie, $geholpen, true)) $geholpen[] = $wie;
+        q("UPDATE tafels SET oproep_status='geaccepteerd', oproep_door=?, geholpen_door=? WHERE tafel=?",
+          "ssi", [$wie, mb_substr(implode(', ', $geholpen), 0, 255), $tafel]);
         stuur(["succes" => true]);
     }
 
@@ -749,6 +811,15 @@ try {
         foreach ($items as $it) {
             if (!isset($menu[$it['naam']])) fout("'{$it['naam']}' staat niet (meer) op het menu.");
             if ($it['aantal'] < 1 || $it['aantal'] > 20) fout("Ongeldig aantal voor '{$it['naam']}'.");
+        }
+
+        // Verlengd met alleen drankjes en de tijd voor gerechten is voorbij? Dan geen gerechten meer
+        if (!empty($t['eten_tot']) && strtotime($t['eten_tot']) <= time()) {
+            foreach ($items as $it) {
+                if ($menu[$it['naam']]['categorie'] !== 'drankje') {
+                    fout("De tijd voor gerechten zit erop. Jullie hebben verlengd voor alleen drankjes, dus je kunt nu alleen drankjes bestellen.");
+                }
+            }
         }
 
         // Ronde-limiet (drankjes tellen niet mee)

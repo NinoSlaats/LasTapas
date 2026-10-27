@@ -164,10 +164,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 terug('toegevoegd', 'arrangementen', $naam);
             }
         } else {
-            // De naam van een bestaand arrangement blijft vast (tafels verwijzen ernaar)
-            q("UPDATE pakketten SET omschrijving=?, duur=?, drank=?, prijs_volw=?, prijs_sen=?, prijs_kind=?, volgorde=? WHERE naam=?",
-              "siidddis", [$omschrijving, $duur, $drank, $pv, $ps, $pk, $volgorde, $naam]);
-            terug('opgeslagen', 'arrangementen', $naam);
+            // Naam wijzigen mag: tafels die nu dit arrangement hebben, krijgen de nieuwe naam mee.
+            // (In het archief blijft de oude naam staan, zodat oude statistieken kloppen met wat er toen was.)
+            $nieuweNaam = trim($_POST['nieuwe_naam'] ?? $naam);
+            if ($nieuweNaam === '' || mb_strlen($nieuweNaam) > 100) {
+                $fout = 'Geef het arrangement een naam (maximaal 100 tekens).';
+            } elseif ($nieuweNaam !== $naam && q("SELECT 1 FROM pakketten WHERE naam = ?", "s", [$nieuweNaam])->fetch_assoc()) {
+                $fout = "Er bestaat al een arrangement met de naam '$nieuweNaam'.";
+            } else {
+                q("UPDATE pakketten SET naam=?, omschrijving=?, duur=?, drank=?, prijs_volw=?, prijs_sen=?, prijs_kind=?, volgorde=? WHERE naam=?",
+                  "ssiidddis", [$nieuweNaam, $omschrijving, $duur, $drank, $pv, $ps, $pk, $volgorde, $naam]);
+                if ($nieuweNaam !== $naam) {
+                    q("UPDATE tafels SET pakket = ? WHERE pakket = ?", "ss", [$nieuweNaam, $naam]);
+                    q("UPDATE bestellingen SET pakket = ? WHERE pakket = ?", "ss", [$nieuweNaam, $naam]);
+                }
+                terug('opgeslagen', 'arrangementen', $nieuweNaam);
+            }
         }
     }
 
@@ -176,6 +188,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $naam = $_POST['naam'] ?? '';
         if (q("SELECT 1 FROM tafels WHERE pakket = ?", "s", [$naam])->fetch_assoc()) {
             $fout = "Het arrangement '$naam' is nu in gebruik bij een tafel en kan daarom niet worden verwijderd.";
+        } elseif (count(pakketten()) <= 1) {
+            $fout = "Dit is het laatste arrangement. Voeg eerst een ander arrangement toe, anders kunnen gasten niets kiezen.";
         } else {
             q("DELETE FROM pakketten WHERE naam = ?", "s", [$naam]);
             terug('verwijderd', 'arrangementen');
@@ -225,10 +239,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         terug('opgeslagen', 'instellingen');
     }
 
+    if ($actie === 'reserveren_opslaan') {
+        // Openingstijden per dag (maandag = 1 ... zondag = 7)
+        $tijdOk = fn($t) => preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', (string)$t) === 1;
+        $delen = [];
+        for ($d = 1; $d <= 7; $d++) {
+            $van = (string)($_POST["open_van_$d"] ?? '');
+            $tot = (string)($_POST["open_tot_$d"] ?? '');
+            if (empty($_POST["open_$d"])) { $delen[] = ''; continue; }
+            if (!$tijdOk($van) || !$tijdOk($tot)) { $fout = 'Vul bij ' . DAG_NAMEN[$d] . ' een geldige openings- en sluitingstijd in.'; break; }
+            if ($van === $tot) { $fout = 'Bij ' . DAG_NAMEN[$d] . ' zijn de openings- en sluitingstijd hetzelfde.'; break; }
+            $delen[] = "$van-$tot";
+        }
+        if (!$fout) {
+            $adres = trim((string)($_POST['site_adres'] ?? ''));
+            if ($adres !== '' && substr($adres, -1) !== '/') $adres .= '/';
+            $nieuw = [
+                'reserveren_aan'    => !empty($_POST['reserveren_aan']) ? '1' : '0',
+                'openingstijden'    => implode('|', $delen),
+                'reserveer_stap'    => (string)max(15, min(120, intval($_POST['reserveer_stap'] ?? 30))),
+                'reserveer_duur'    => (string)max(30, min(360, intval($_POST['reserveer_duur'] ?? 120))),
+                'reserveer_dagen'   => (string)max(1, min(365, intval($_POST['reserveer_dagen'] ?? 60))),
+                'reserveer_max_personen' => (string)max(1, min(40, intval($_POST['reserveer_max_personen'] ?? 12))),
+                'site_adres'        => preg_match('#^https?://#i', $adres) ? $adres : instelling('site_adres', ''),
+            ];
+            foreach ($nieuw as $sleutel => $waarde) {
+                q("INSERT INTO instellingen (sleutel, waarde) VALUES (?, ?) ON DUPLICATE KEY UPDATE waarde = ?", "sss", [$sleutel, $waarde, $waarde]);
+            }
+            terug('opgeslagen', 'instellingen');
+        }
+    }
+
     if ($actie === 'instellingen_opslaan') {
         $nieuw = [
             'verleng_minuten'  => (string)max(5, min(240, intval($_POST['verleng_minuten'] ?? 30))),
+            'verleng_stap'     => (string)max(5, min(60, intval($_POST['verleng_stap'] ?? 15))),
+            'verleng_max'      => (string)max(5, min(240, intval($_POST['verleng_max'] ?? 60))),
             'verleng_prijs_pp' => number_format(max(0, floatval(str_replace(',', '.', $_POST['verleng_prijs_pp'] ?? '6'))), 2, '.', ''),
+            'verleng_prijs_drank_pp' => number_format(max(0, floatval(str_replace(',', '.', $_POST['verleng_prijs_drank_pp'] ?? '3'))), 2, '.', ''),
+            'verleng_aan'      => !empty($_POST['verleng_aan']) ? '1' : '0',
             'ronde_max_pp'     => (string)max(0, min(20, intval($_POST['ronde_max_pp'] ?? 3))),
             'ronde_minuten'    => (string)max(1, min(120, intval($_POST['ronde_minuten'] ?? 10))),
             'opruimen_na_uren' => (string)max(1, min(24, intval($_POST['opruimen_na_uren'] ?? 4))),
@@ -256,6 +305,7 @@ if (!empty($mailPoging)) $openSectie = 'instellingen';
 if ($fout) {
     $a = $_POST['actie'] ?? '';
     if (strpos($a, 'menu_') === 0) { $openSectie = $a === 'menu_toevoegen' ? 'nieuw' : 'menu'; $openKies = $_POST['id'] ?? ''; }
+    if ($a === 'reserveren_opslaan') $openSectie = 'instellingen';
     if (strpos($a, 'pakket_') === 0) { $openSectie = 'arrangementen'; $openKies = $a === 'pakket_toevoegen' ? 'nieuw' : ($_POST['naam'] ?? ''); }
 }
 $alleInstellingen = instellingen(true);
@@ -355,6 +405,16 @@ function menuFormulier($m, $nieuw = false) {
 $paginaTitel = 'Menu & prijzen';
 $actievePagina = 'menu_beheer.php';
 $extraStijl = '
+    /* Openingstijden per dag */
+    .openingstijden-tabel { display: grid; gap: 6px; max-width: 560px; }
+    .ot-rij { display: grid; grid-template-columns: 140px 135px 28px 135px 1fr; align-items: center; gap: 8px; background: var(--vlak); border: 1px solid var(--lijn); border-radius: 8px; padding: 6px 10px; }
+    .ot-rij input[type=time] { margin: 0; padding: 7px; }
+    .ot-rij .ot-dag { margin: 0; font-weight: bold; }
+    .ot-rij span { color: var(--grijs); text-align: center; }
+    .ot-rij .ot-dicht { display: none; color: #922b21; font-weight: bold; text-align: left; }
+    .ot-rij.dicht input[type=time], .ot-rij.dicht > span:not(.ot-dicht) { display: none; }
+    .ot-rij.dicht .ot-dicht { display: block; grid-column: 2 / -1; }
+    @media (max-width: 560px) { .ot-rij { grid-template-columns: 1fr 1fr; } .ot-rij .ot-dag { grid-column: 1 / -1; } .ot-rij > span:not(.ot-dicht) { display: none; } }
     /* Foto van een gerecht */
     .foto-blok { display: flex; gap: 16px; align-items: center; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px dashed var(--lijn); }
     .foto-voorbeeld { position: relative; width: 200px; aspect-ratio: 4 / 3; flex-shrink: 0; border-radius: 10px; overflow: hidden; background: #f3ece3; border: 1px solid var(--lijn); }
@@ -395,6 +455,7 @@ $extraStijl = '
     .vinkje input { width: 18px; height: 18px; margin: 0; }
     .actief-vinkje { margin-top: 12px; font-weight: bold; }
     .item-knoppen { display: flex; gap: 10px; }
+    .nieuw-knop { margin: 0; background: #27ae60; white-space: nowrap; }
     .verwijder-form { position: absolute; right: 16px; bottom: 16px; margin: 0; }
     .sectie-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--lijn); margin-bottom: 20px; flex-wrap: wrap; }
     .sectie-tabs button { background: none; color: var(--grijs); border-radius: 0; margin: 0; padding: 12px 18px; border-bottom: 3px solid transparent; margin-bottom: -2px; }
@@ -403,7 +464,9 @@ $extraStijl = '
     .cat-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 15px; }
     .cat-tabs button { margin: 0; background: #f0eae1; color: var(--grijs); border-radius: 20px; padding: 9px 16px; }
     .cat-tabs button.actief { background: var(--rood); color: white; }
-    .kies-rij { margin-bottom: 15px; max-width: 420px; }
+    .kies-rij { margin-bottom: 15px; max-width: 560px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .kies-rij label { flex-basis: 100%; }
+    .kies-rij select { flex: 1 1 220px; width: auto; margin-top: 0; }
     .kies-rij select { font-weight: bold; }
     @media (max-width: 700px) {
         .verwijder-form { position: static; margin-top: 10px; }
@@ -474,6 +537,7 @@ include __DIR__ . '/beheer_kop.php';
                 <?php endforeach; ?>
                 <option value="nieuw">➕ Nieuw arrangement toevoegen</option>
             </select>
+            <button type="button" class="nieuw-knop" onclick="document.getElementById('pakket-kies').value = 'nieuw'; toonPakket('nieuw');">➕ Nieuw arrangement</button>
         </div>
 
         <?php foreach (pakketten() as $naam => $p): ?>
@@ -484,6 +548,7 @@ include __DIR__ . '/beheer_kop.php';
                 <input type="hidden" name="naam" value="<?php echo esc($naam); ?>">
                 <h3 style="margin-top: 0;"><?php echo esc($naam); ?></h3>
                 <div class="form-grid">
+                    <div class="breed"><label>Naam</label><input type="text" name="nieuwe_naam" required maxlength="100" value="<?php echo esc($naam); ?>"></div>
                     <div class="breed"><label>Omschrijving</label><input type="text" name="omschrijving" value="<?php echo esc($p['omschrijving']); ?>"></div>
                     <div><label>Duur (minuten)</label><input type="number" name="duur" min="15" max="600" value="<?php echo $p['duur']; ?>"></div>
                     <div><label>Volgorde</label><input type="number" name="volgorde" value="<?php echo $p['volgorde']; ?>"></div>
@@ -494,7 +559,7 @@ include __DIR__ . '/beheer_kop.php';
                 <label class="vinkje actief-vinkje"><input type="checkbox" name="drank" value="1" <?php echo $p['drank'] ? 'checked' : ''; ?>> Drankjes inbegrepen</label>
                 <div class="item-knoppen"><button type="submit">Opslaan</button></div>
             </form>
-            <form method="POST" class="verwijder-form" onsubmit="return confirm('Arrangement definitief verwijderen?');">
+            <form method="POST" class="verwijder-form" onsubmit="return confirm('Arrangement <?php echo esc(addslashes($naam)); ?> definitief verwijderen?');">
                 <?php echo csrfVeld(); ?>
                 <input type="hidden" name="actie" value="pakket_verwijderen">
                 <input type="hidden" name="naam" value="<?php echo esc($naam); ?>">
@@ -521,7 +586,7 @@ include __DIR__ . '/beheer_kop.php';
                 <div class="item-knoppen"><button type="submit">Arrangement toevoegen</button></div>
             </form>
         </div>
-        <p class="uitleg">De naam van een bestaand arrangement kan niet worden gewijzigd, omdat tafels ernaar verwijzen.</p>
+        <p class="uitleg">Naam gewijzigd? Tafels die nu dit arrangement hebben, krijgen de nieuwe naam ook. In de statistieken blijft bij oude bezoeken de oude naam staan. Een arrangement dat nu bij een tafel in gebruik is, kun je pas verwijderen als die tafel klaar is.</p>
     </section>
 
     <!-- ===== INSTELLINGEN ===== -->
@@ -531,12 +596,21 @@ include __DIR__ . '/beheer_kop.php';
                 <?php echo csrfVeld(); ?>
                 <input type="hidden" name="actie" value="instellingen_opslaan">
                 <h3 style="margin-top: 0;">Tijd verlengen</h3>
+                <label class="vinkje actief-vinkje schakel-verleng"><input type="checkbox" name="verleng_aan" value="1" <?php echo ($alleInstellingen['verleng_aan'] ?? '1') === '1' ? 'checked' : ''; ?>> Gasten mogen hun tijd verlengen</label>
+                <p class="uitleg" style="margin-top: 4px;">Uitgevinkt: gasten zien de knop "Tijd verlengen" niet meer. Is hun tijd om, dan kunnen ze alleen nog afrekenen.</p>
                 <div class="form-grid">
-                    <div><label>Aantal minuten per keer</label>
+                    <div><label>Gast kiest in stappen van (minuten)</label>
+                        <input type="number" name="verleng_stap" min="5" max="60" value="<?php echo esc($alleInstellingen['verleng_stap'] ?? 15); ?>"></div>
+                    <div><label>Maximaal per keer (minuten)</label>
+                        <input type="number" name="verleng_max" min="5" max="240" value="<?php echo esc($alleInstellingen['verleng_max'] ?? 60); ?>"></div>
+                    <div><label>De prijzen hieronder gelden per (minuten)</label>
                         <input type="number" name="verleng_minuten" min="5" max="240" value="<?php echo esc($alleInstellingen['verleng_minuten'] ?? 30); ?>"></div>
-                    <div><label>Prijs per persoon (€)</label>
+                    <div><label>Prijs per persoon: eten + drinken (€)</label>
                         <input type="number" name="verleng_prijs_pp" step="0.01" min="0" value="<?php echo esc($alleInstellingen['verleng_prijs_pp'] ?? '6.00'); ?>"></div>
+                    <div><label>Prijs per persoon: alleen drankjes (€)</label>
+                        <input type="number" name="verleng_prijs_drank_pp" step="0.01" min="0" value="<?php echo esc($alleInstellingen['verleng_prijs_drank_pp'] ?? '3.00'); ?>"></div>
                 </div>
+                <p class="uitleg">Bij "alleen drankjes" kan de gast in de extra tijd alleen drankjes bestellen, geen gerechten. De prijs rekent mee met de gekozen tijd: met de standaardinstellingen kost 15 minuten de helft en 60 minuten het dubbele van de prijs per 30 minuten.</p>
                 <h3>Ronde-limiet</h3>
                 <div class="form-grid">
                     <div><label>Max. gerechten per persoon <small>(0 = geen limiet)</small></label>
@@ -551,6 +625,44 @@ include __DIR__ . '/beheer_kop.php';
                         <input type="number" name="opruimen_na_uren" min="1" max="24" value="<?php echo esc($alleInstellingen['opruimen_na_uren'] ?? 4); ?>"></div>
                 </div>
                 <div class="item-knoppen"><button type="submit">Instellingen opslaan</button></div>
+            </form>
+        </div>
+        <div class="item-kaart">
+            <form method="POST">
+                <?php echo csrfVeld(); ?>
+                <input type="hidden" name="actie" value="reserveren_opslaan">
+                <h3 style="margin-top: 0;">📅 Online reserveren</h3>
+                <label class="vinkje actief-vinkje"><input type="checkbox" name="reserveren_aan" value="1" <?php echo ($alleInstellingen['reserveren_aan'] ?? '1') === '1' ? 'checked' : ''; ?>> Gasten kunnen online een tafel reserveren</label>
+                <p class="uitleg" style="margin-top: 4px;">Uitgevinkt: de reserveerpagina laat weten dat online reserveren nu niet kan. Bestaande reserveringen blijven gewoon staan.</p>
+                <h4 style="margin: 16px 0 6px;">🕒 Openingstijden</h4>
+                <p class="uitleg" style="margin-top: 0;">Vink een dag uit als jullie dan gesloten zijn. Sluiten om 00:00 betekent 12 uur 's nachts. Gasten kunnen reserveren vanaf de openingstijd tot (sluitingstijd − duur van een reservering).</p>
+                <div class="openingstijden-tabel">
+                    <?php foreach (openingstijden() as $d => $o): ?>
+                        <div class="ot-rij<?php echo $o ? '' : ' dicht'; ?>">
+                            <label class="vinkje ot-dag"><input type="checkbox" name="open_<?php echo $d; ?>" value="1" <?php echo $o ? 'checked' : ''; ?>
+                                   onchange="this.closest('.ot-rij').classList.toggle('dicht', !this.checked)"> <?php echo ucfirst(DAG_NAMEN[$d]); ?></label>
+                            <input type="time" name="open_van_<?php echo $d; ?>" value="<?php echo esc($o['open'] ?? '17:00'); ?>" aria-label="Open vanaf (<?php echo DAG_NAMEN[$d]; ?>)">
+                            <span>tot</span>
+                            <input type="time" name="open_tot_<?php echo $d; ?>" value="<?php echo esc($o['sluit'] ?? '00:00'); ?>" aria-label="Open tot (<?php echo DAG_NAMEN[$d]; ?>)">
+                            <span class="ot-dicht">Gesloten</span>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+                <h4 style="margin: 18px 0 6px;">Reserveren</h4>
+                <div class="form-grid">
+                    <div><label>Elke ... minuten een starttijd</label>
+                        <input type="number" name="reserveer_stap" min="15" max="120" step="15" value="<?php echo esc($alleInstellingen['reserveer_stap'] ?? 30); ?>"></div>
+                    <div><label>Een reservering duurt (minuten)</label>
+                        <input type="number" name="reserveer_duur" min="30" max="360" step="15" value="<?php echo esc($alleInstellingen['reserveer_duur'] ?? 120); ?>"></div>
+                    <div><label>Hoeveel dagen vooruit reserveren</label>
+                        <input type="number" name="reserveer_dagen" min="1" max="365" value="<?php echo esc($alleInstellingen['reserveer_dagen'] ?? 60); ?>"></div>
+                    <div><label>Maximaal aantal personen per online reservering</label>
+                        <input type="number" name="reserveer_max_personen" min="1" max="40" value="<?php echo esc($alleInstellingen['reserveer_max_personen'] ?? 12); ?>"></div>
+                    <div><label>Adres van de site (voor de links in e-mails)</label>
+                        <input type="text" name="site_adres" value="<?php echo esc($alleInstellingen['site_adres'] ?? ''); ?>" placeholder="https://.../lastapas/"></div>
+                </div>
+                <p class="uitleg">Groepen groter dan 4 kiezen meerdere tafels die naast of achter elkaar staan; die worden aangeschoven. Een tafel is tijdens de hele duur van een reservering bezet voor andere gasten. Het adres wordt gebruikt als je de site op de laptop zelf (localhost) opent; via ngrok vult de site het adres zelf in.</p>
+                <div class="item-knoppen"><button type="submit">Opslaan</button></div>
             </form>
         </div>
         <div class="item-kaart">

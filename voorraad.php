@@ -177,8 +177,41 @@ if (!isset($_SESSION['rol']) || !in_array($_SESSION['rol'], ['chef', 'bar', 'baa
             .header-title h1 { font-size: 1.3rem; }
             th, td { padding: 8px 10px; font-size: 0.85rem; }
         }
+            /* Kop gelijk houden in alle talen: titel en knoppen blijven op één regel
+           (te lange titels eindigen op een smal scherm met "…" in plaats van dat de balk hoger wordt) */
+        @media (min-width: 701px) {
+            header { gap: 20px; }
+            .header-title { flex: 1 1 auto; min-width: 0; }
+            .header-title h1, .header-title p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .user-info { flex: 0 0 auto; }
+        }
+        /* Tablet / klein laptopscherm: knoppen onder de titel, over de volle breedte */
+        @media (min-width: 701px) and (max-width: 1365px) {
+            header { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px 20px; }
+            .user-info { display: contents; }
+            .user-details { grid-column: 2; grid-row: 1; }
+            .user-info > div:last-child { grid-column: 1 / -1; display: flex; flex-wrap: nowrap; align-items: center; gap: 6px;
+                                           overflow-x: auto; scrollbar-width: thin; padding-bottom: 2px; }
+            /* Rechts uitlijnen als alles past; past het niet, dan schuift de rij (geen extra regel) */
+            .user-info > div:last-child > :first-child { margin-left: auto; }
+            .user-info > div:last-child .btn-actie { flex-shrink: 0; }
+            .user-info > div:last-child .btn-actie { margin: 0; }
+            .user-details, .user-details span, .btn-actie { white-space: nowrap; }
+        }
+            /* Telefoon: kop in elke taal even hoog (ondertitel altijd 2 regels ruimte, knoppen op één schuifbare rij) */
+        @media (max-width: 700px) {
+            .header-title { max-width: 100%; min-width: 0; }
+            .header-title h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .header-title p { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+                              line-height: 1.3; min-height: 2.6em; }
+            .user-info { flex-direction: column; align-items: stretch; gap: 10px; }
+            .user-details, .user-details span { white-space: nowrap; }
+            .user-info > div:last-child { display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; overflow-x: auto;
+                                          width: 100%; padding-bottom: 2px; scrollbar-width: thin; }
+            .user-info > div:last-child .btn-actie { flex-shrink: 0; margin: 0; white-space: nowrap; }
+        }
     </style>
-    <script src="taal.js?v=20260928d" defer></script>
+    <script src="taal.js?v=20261007c" defer></script>
 </head>
 <body>
 
@@ -193,18 +226,11 @@ if (!isset($_SESSION['rol']) || !in_array($_SESSION['rol'], ['chef', 'bar', 'baa
             </div>
             <div>
                 <span id="taal-plek" style="margin-right: 5px;"></span>
-                <?php if ($_SESSION['rol'] === 'bar'): ?>
-                    <a href="bar.php" class="btn-actie btn-terug">🍷 Naar Bar</a>
-                <?php elseif ($_SESSION['rol'] === 'chef'): ?>
-                    <a href="chef.php" class="btn-actie btn-terug">🍳 Naar Keuken</a>
-                <?php elseif ($_SESSION['rol'] === 'baas'): ?>
-                    <a href="baas_paneel.php" class="btn-actie btn-terug">⚙️ Beheerderspaneel</a>
-                    <a href="chef.php" class="btn-actie btn-terug">🍳 Naar Keuken</a>
-                <?php endif; ?>
-                <a href="logout.php" class="btn-actie btn-uitlog">Uitloggen</a>
+                <?php require_once __DIR__ . '/navigatie.php'; toonNavigatie(); ?>
             </div>
         </div>
     </header>
+    <?php toonSectieTabs(); ?>
 
     <div class="container">
         <div class="card">

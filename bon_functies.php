@@ -47,7 +47,7 @@ function bonGegevens($t, $taal) {
         'rekening' => berekenRekening($t, $taal),
         'datum' => date('d-m-Y H:i'),
         'methode' => $t['betaalmethode'] ?: 'contant',
-        'cadeaubonnen' => empty($t['sessie']) ? [] : alleRijen(q(
+        'cadeaubonnen' => (empty($t['sessie']) || !kortingFunctieAan()) ? [] : alleRijen(q(
             "SELECT code, bedrag, voor_naam FROM cadeaubonnen WHERE tafel_sessie = ? AND status IN ('open', 'actief') ORDER BY id",
             "s", [$t['sessie']])),
     ];

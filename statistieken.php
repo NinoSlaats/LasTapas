@@ -59,6 +59,25 @@ $topDrank = alleRijen(q("SELECT naam, SUM(aantal) AS aantal FROM verkocht
                          WHERE categorie = 'drankje' AND $wVerkocht
                          GROUP BY naam ORDER BY aantal DESC LIMIT 5"));
 
+// ---- Drukste dagen van de week (alle bezoeken: betaald én vertrokken zonder betalen) ----
+$weekdagNamen = [1 => 'Maandag', 2 => 'Dinsdag', 3 => 'Woensdag', 4 => 'Donderdag', 5 => 'Vrijdag', 6 => 'Zaterdag', 7 => 'Zondag'];
+$perWeekdag = [];
+foreach ($weekdagNamen as $nr => $naam) $perWeekdag[$nr] = ['label' => $naam, 'gasten' => 0, 'tafels' => 0];
+foreach (alleRijen(q("SELECT afgerond_op, volw + sen + kind AS gasten FROM archief WHERE $wArchief")) as $r) {
+    $nr = intval(date('N', strtotime($r['afgerond_op'])));
+    $perWeekdag[$nr]['gasten'] += intval($r['gasten']);
+    $perWeekdag[$nr]['tafels']++;
+}
+$druksteDag = null;
+foreach ($perWeekdag as $d) {
+    if ($d['gasten'] > 0 && (!$druksteDag || $d['gasten'] > $druksteDag['gasten'])) $druksteDag = $d;
+}
+$weekdagRijen = array_values(array_map(function ($d) {
+    $d['label'] = $d['label'] . ' (' . $d['tafels'] . ($d['tafels'] === 1 ? ' tafel' : ' tafels') . ')';
+    return $d;
+}, $perWeekdag));
+if (!$druksteDag) $weekdagRijen = [];
+
 // ---- Drukste uren (aantal bestelde gerechten per uur) ----
 $perUur = alleRijen(q("SELECT HOUR(datum) AS uur, SUM(aantal) AS aantal FROM verkocht
                        WHERE $wVerkocht GROUP BY HOUR(datum) ORDER BY uur"));
@@ -69,7 +88,7 @@ $reviews = q("SELECT COUNT(beoordeling) AS n, AVG(beoordeling) AS gem FROM archi
 $sterVerdeling = alleRijen(q("SELECT beoordeling, COUNT(*) AS aantal FROM archief
                               WHERE beoordeling IS NOT NULL AND $wArchief
                               GROUP BY beoordeling ORDER BY beoordeling DESC"));
-$laatsteReviews = alleRijen(q("SELECT tafel, gast_naam, beoordeling, review_tekst, review_op FROM archief
+$laatsteReviews = alleRijen(q("SELECT tafel, review_naam, beoordeling, review_tekst, review_op FROM archief
                                WHERE beoordeling IS NOT NULL AND $wArchief ORDER BY review_op DESC LIMIT 10"));
 function sterren($n) {
     $n = max(0, min(5, intval($n)));
@@ -77,6 +96,32 @@ function sterren($n) {
 }
 
 // ---- Laatst afgesloten tafels ----
+// Per tafel: wie kookte, wie maakte de drankjes, wie bracht het, wie hielp, wie nam de betaling aan, wie rondde af
+function wieDeedWat($a) {
+    $m = json_decode($a['medewerkers'] ?? '', true);
+    if (!is_array($m)) $m = ['afgerond' => $a['afgerond_door'] !== '' ? [$a['afgerond_door']] : []];   // oudere tafels
+    $rollen = [
+        'keuken'   => '🍳 Gekookt door',
+        'bar'      => '🍷 Drankjes door',
+        'gebracht' => '🏃 Gebracht door',
+        'geholpen' => '🙋 Geholpen door',
+        'betaling' => '💶 Betaling door',
+        'afgerond' => '✅ Afgerond door',
+    ];
+    $regels = [];
+    $namen = [];
+    foreach ($rollen as $sleutel => $label) {
+        if (!empty($m[$sleutel])) {
+            $regels[] = '<div><span class="wie-label">' . $label . ':</span> <strong data-geen-vertaling>' . esc(implode(', ', $m[$sleutel])) . '</strong></div>';
+            foreach ($m[$sleutel] as $n) $namen[$n] = true;
+        }
+    }
+    if (!$regels) return '-';
+    // Compact: een uitklapknop met het aantal medewerkers; pas na klikken zie je wie wat deed
+    $aantal = count($namen);
+    return '<details class="wie-details"><summary>👥 Bekijken <span class="wie-aantal">(' . $aantal . ' ' . ($aantal === 1 ? 'medewerker' : 'medewerkers') . ')</span></summary>'
+         . '<div class="wie-lijst">' . implode('', $regels) . '</div></details>';
+}
 $recent = alleRijen(q("SELECT * FROM archief WHERE $wArchief ORDER BY afgerond_op DESC LIMIT 15"));
 
 // Balkjes tekenen (breedte relatief aan de hoogste waarde)
@@ -137,6 +182,17 @@ $extraStijl = '
     .review-sterren { color: #e9a23b; font-size: 1.1rem; letter-spacing: 2px; }
     .review p { margin: 6px 0 0 0; font-size: 0.9rem; }
     .status-verlaten { color: #c0392b; font-weight: bold; }
+    .wie-cel { font-size: 0.85rem; line-height: 1.5; }
+    .wie-details summary { cursor: pointer; color: var(--azul, #1f4e8c); font-weight: bold; list-style: none; white-space: nowrap;
+                           background: #eef4fb; border-radius: 14px; padding: 3px 10px; display: inline-block; }
+    .wie-details summary::-webkit-details-marker { display: none; }
+    .wie-details[open] summary { background: #1f4e8c; color: white; }
+    .wie-details .wie-aantal { font-weight: normal; }
+    .wie-lijst { margin-top: 6px; padding: 8px 10px; background: var(--vlak); border: 1px solid var(--lijn); border-radius: 8px; }
+    .alles-wie { margin: 0 0 8px; }
+    .alles-wie button { margin: 0; padding: 6px 12px; font-size: 0.85rem; background: #786a63; }
+    .wie-label { color: var(--grijs); }
+    @media (max-width: 700px) { table.kaarten td.wie-cel { display: block; } table.kaarten td.wie-cel::before { display: block; margin-bottom: 4px; } }
     @media (max-width: 700px) {
         .twee-kolom { grid-template-columns: 1fr; }
         .balk-rij { grid-template-columns: 1fr auto; }
@@ -172,6 +228,12 @@ include __DIR__ . '/beheer_kop.php';
 
     <h2>Omzet per dag</h2>
     <?php echo balken($dagLabels, 'label', 'omzet', true); ?>
+
+    <h2>Drukste dagen van de week</h2>
+    <?php if ($druksteDag): ?>
+        <p class="uitleg">Drukste dag: <strong><?php echo esc($druksteDag['label']); ?></strong> met <?php echo intval($druksteDag['gasten']); ?> gasten in deze periode. Aantal gasten per dag van de week (alle bezoeken, ook als er niet betaald is).</p>
+    <?php endif; ?>
+    <?php echo balken($weekdagRijen, 'label', 'gasten'); ?>
 
     <div class="twee-kolom">
         <div>
@@ -217,7 +279,7 @@ include __DIR__ . '/beheer_kop.php';
                     <div class="review">
                         <div class="review-kop">
                             <span class="review-sterren"><?php echo sterren($r['beoordeling']); ?></span>
-                            <small><?php echo $r['gast_naam'] !== '' ? esc($r['gast_naam']) : 'Anoniem'; ?> · tafel <?php echo intval($r['tafel']); ?> · <?php echo esc(date('d-m H:i', strtotime($r['review_op']))); ?></small>
+                            <small><?php echo $r['review_naam'] !== '' ? esc($r['review_naam']) : 'Anoniem'; ?> · tafel <?php echo intval($r['tafel']); ?> · <?php echo esc(date('d-m H:i', strtotime($r['review_op']))); ?></small>
                         </div>
                         <?php if ($r['review_tekst'] !== ''): ?><p><?php echo esc($r['review_tekst']); ?></p><?php endif; ?>
                     </div>
@@ -227,12 +289,15 @@ include __DIR__ . '/beheer_kop.php';
     <?php endif; ?>
 
     <h2>Laatst afgesloten tafels</h2>
+    <?php if ($recent): ?>
+        <p class="alles-wie"><button type="button" onclick="const open = [...document.querySelectorAll('.wie-details')].some(d => !d.open); document.querySelectorAll('.wie-details').forEach(d => d.open = open);">👥 Alles open- of dichtklappen</button></p>
+    <?php endif; ?>
     <?php if (!$recent): ?>
         <p class="uitleg">Nog geen afgesloten tafels in deze periode. Tafels komen hier zodra een serveerster ze vrijmaakt.</p>
     <?php else: ?>
     <div class="tabel-scroll">
         <table class="kaarten">
-            <thead><tr><th>Afgerond</th><th>Tafel</th><th>Gast</th><th>Arrangement</th><th>Totaal</th><th>Status</th><th>Door</th></tr></thead>
+            <thead><tr><th>Afgerond</th><th>Tafel</th><th>Gast</th><th>Arrangement</th><th>Totaal</th><th>Status</th><th>Wie deed wat</th></tr></thead>
             <tbody>
             <?php foreach ($recent as $a): ?>
                 <tr>
@@ -248,7 +313,7 @@ include __DIR__ . '/beheer_kop.php';
                             Betaald (<?php echo esc($a['betaalmethode'] ?: '-'); ?>)
                         <?php endif; ?>
                     </td>
-                    <td data-label="Door"><?php echo esc($a['afgerond_door']); ?></td>
+                    <td data-label="Wie deed wat" class="wie-cel"><?php echo wieDeedWat($a); ?></td>
                 </tr>
             <?php endforeach; ?>
             </tbody>

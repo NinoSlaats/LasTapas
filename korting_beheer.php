@@ -25,6 +25,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrfControle();
     $actie = $_POST['actie'] ?? '';
 
+    // ----- De hele functie aan- of uitzetten -----
+    if ($actie === 'functie_wissel') {
+        $aan = kortingFunctieAan() ? '0' : '1';
+        q("INSERT INTO instellingen (sleutel, waarde) VALUES ('korting_aan', ?) ON DUPLICATE KEY UPDATE waarde = ?", "ss", [$aan, $aan]);
+        instellingen(true);
+        terugNaar('ok', $aan === '1'
+            ? 'Kortingscodes en cadeaubonnen staan AAN. Gasten zien de opties nu bij de rekening.'
+            : 'Kortingscodes en cadeaubonnen staan UIT. Gasten zien de opties niet meer.');
+    }
+
     // ----- Kortingscodes -----
     if ($actie === 'korting_nieuw') {
         $code = normaliseerCode($_POST['code'] ?? '');
@@ -76,6 +86,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         q("UPDATE cadeaubonnen SET status = IF(status = 'geblokkeerd', 'actief', 'geblokkeerd') WHERE id = ? AND status <> 'open'", "i", [$id]);
         terugNaar('ok', 'De cadeaubon is aangepast.', '#cadeaubonnen');
     }
+
+    if ($actie === 'cadeau_verwijder') {
+        $id = intval($_POST['id'] ?? 0);
+        $bon = q("SELECT code FROM cadeaubonnen WHERE id = ?", "i", [$id])->fetch_assoc();
+        if ($bon) {
+            // Staat de bon nu op de rekening van een tafel? Dan daar ook weghalen.
+            q("UPDATE tafels SET cadeaubon_code = '' WHERE cadeaubon_code = ?", "s", [$bon['code']]);
+            q("DELETE FROM cadeaubonnen WHERE id = ?", "i", [$id]);
+            terugNaar('ok', 'Cadeaubon ' . toonCadeauCode($bon['code']) . ' is verwijderd.', '#cadeaubonnen');
+        }
+        terugNaar('fout', 'Deze cadeaubon bestaat niet (meer).', '#cadeaubonnen');
+    }
 }
 
 $melding = $_SESSION['flash'] ?? null;
@@ -83,13 +105,14 @@ unset($_SESSION['flash']);
 
 $codes = alleRijen(q("SELECT * FROM kortingscodes ORDER BY actief DESC, gemaakt_op DESC"));
 
-$zoek = normaliseerCode($_GET['zoek'] ?? '');
-if (strlen($zoek) === 14 && str_starts_with($zoek, 'LT')) $zoek = substr($zoek, 2);
-if ($zoek !== '') {
-    $bonnen = alleRijen(q("SELECT * FROM cadeaubonnen WHERE code LIKE ? ORDER BY id DESC LIMIT 100", "s", ['%' . $zoek . '%']));
-} else {
-    $bonnen = alleRijen(q("SELECT * FROM cadeaubonnen ORDER BY id DESC LIMIT 100"));
+// Zoeken op (een deel van) de code, met of zonder "LT-" en streepjes: "LT-V", "vbp2", "3GFT-5VZ"
+function codePastBij($code, $zoek) {
+    return $zoek === '' || str_contains('LT' . $code, $zoek) || str_contains($code, $zoek);
 }
+$zoek = normaliseerCode($_GET['zoek'] ?? '');
+// Alle bonnen laden (nieuwste eerst); het zoekvak filtert ze live in de browser
+$bonnen = alleRijen(q("SELECT * FROM cadeaubonnen ORDER BY id DESC LIMIT 500"));
+$aantalGevonden = count(array_filter($bonnen, fn($b) => codePastBij($b['code'], $zoek)));
 $totaalTegoed = floatval(q("SELECT COALESCE(SUM(saldo), 0) AS s FROM cadeaubonnen WHERE status = 'actief'")->fetch_assoc()['s']);
 
 $paginaTitel = 'Korting & cadeaubonnen';
@@ -103,6 +126,15 @@ $extraStijl = '
     .label-status.rood { background: #fdecea; color: #922b21; }
     .label-status.geel { background: #fff8e1; color: #7d5a00; }
     #k-code::placeholder { text-transform: none; }
+    .functie-schakel { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
+                       border-radius: 10px; padding: 14px 18px; margin-bottom: 24px; border: 2px solid; }
+    .functie-schakel.aan { background: #eafaf1; border-color: #7dcea0; }
+    .functie-schakel.uit { background: #f6f1ea; border-color: #d5c7b8; }
+    .functie-schakel strong { font-size: 1.05rem; }
+    .functie-schakel p { margin: 4px 0 0 0; color: var(--grijs); font-size: 0.9rem; }
+    .functie-schakel .schakel-knop { margin: 0; }
+    .functie-schakel.aan .schakel-knop { background: #786a63; }
+    .functie-schakel.uit .schakel-knop { background: #27ae60; }
     .code-tekst { font-family: Consolas, monospace; font-weight: bold; letter-spacing: 1px; }
     .btn-klein { background: #2980b9; color: white; padding: 7px 12px; border-radius: 6px; text-decoration: none; font-size: 0.85rem; font-weight: bold; display: inline-block; border: none; margin: 0; cursor: pointer; }
     .btn-klein.grijs { background: #786a63; }
@@ -120,6 +152,21 @@ include __DIR__ . '/beheer_kop.php';
     <?php if ($melding): ?>
         <div class="melding <?php echo $melding[0] === 'ok' ? 'ok' : 'fout'; ?>"><?php echo esc($melding[1]); ?></div>
     <?php endif; ?>
+
+    <?php $functieAan = kortingFunctieAan(); ?>
+    <div class="functie-schakel <?php echo $functieAan ? 'aan' : 'uit'; ?>">
+        <div>
+            <strong><?php echo $functieAan ? '✅ Kortingscodes en cadeaubonnen staan AAN' : '⏸️ Kortingscodes en cadeaubonnen staan UIT'; ?></strong>
+            <p><?php echo $functieAan
+                ? 'Gasten kunnen bij de rekening een kortingscode of cadeaubon invullen en een cadeaubon kopen.'
+                : 'Gasten zien geen kortingscode-veld en kunnen geen cadeaubon kopen of gebruiken. Je kunt hieronder alvast codes en bonnen klaarzetten.'; ?></p>
+        </div>
+        <form method="POST">
+            <?php echo csrfVeld(); ?>
+            <input type="hidden" name="actie" value="functie_wissel">
+            <button type="submit" class="schakel-knop"><?php echo $functieAan ? 'Uitzetten' : 'Aanzetten'; ?></button>
+        </form>
+    </div>
 
     <h2 style="margin-top: 0;">🎟️ Kortingscodes</h2>
     <p class="uitleg">Gasten vullen een kortingscode in bij de rekening. De korting geldt voor het eten en drinken (niet voor cadeaubonnen).</p>
@@ -210,9 +257,9 @@ include __DIR__ . '/beheer_kop.php';
     </div>
 
     <form method="GET" class="zoek-rij" action="korting_beheer.php#cadeaubonnen">
-        <input type="text" name="zoek" placeholder="Zoek op code, bijv. LT-ABCD" value="<?php echo esc($_GET['zoek'] ?? ''); ?>">
+        <input type="text" name="zoek" id="bon-zoek" placeholder="Zoek op code, bijv. LT-ABCD" autocomplete="off" value="<?php echo esc($_GET['zoek'] ?? ''); ?>">
         <button type="submit">Zoeken</button>
-        <?php if ($zoek !== ''): ?><a href="korting_beheer.php#cadeaubonnen" class="btn-annuleer">Alles</a><?php endif; ?>
+        <a href="korting_beheer.php#cadeaubonnen" class="btn-annuleer" id="bon-zoek-wis" <?php echo $zoek === '' ? 'style="display: none;"' : ''; ?>>Alles</a>
     </form>
 
     <div class="tabel-scroll">
@@ -220,7 +267,9 @@ include __DIR__ . '/beheer_kop.php';
             <thead><tr><th>Code</th><th>Bedrag</th><th>Saldo</th><th>Voor</th><th>Status</th><th>Gekocht</th><th></th></tr></thead>
             <tbody>
             <?php if (!$bonnen): ?>
-                <tr><td colspan="7" class="uitleg"><?php echo $zoek !== '' ? 'Geen cadeaubon gevonden met deze code.' : 'Nog geen cadeaubonnen.'; ?></td></tr>
+                <tr><td colspan="7" class="uitleg">Nog geen cadeaubonnen.</td></tr>
+            <?php else: ?>
+                <tr id="geen-bon" <?php echo $aantalGevonden > 0 ? 'style="display: none;"' : ''; ?>><td colspan="7" class="uitleg">Geen cadeaubon gevonden met deze code.</td></tr>
             <?php endif; ?>
             <?php foreach ($bonnen as $b):
                 if ($b['status'] === 'open') $st = ['geel', 'Nog niet betaald'];
@@ -228,7 +277,7 @@ include __DIR__ . '/beheer_kop.php';
                 elseif (floatval($b['saldo']) <= 0) $st = ['uit', 'Tegoed op'];
                 else $st = ['aan', 'Geldig'];
             ?>
-                <tr>
+                <tr class="bon-rij" data-code="<?php echo esc($b['code']); ?>" <?php echo codePastBij($b['code'], $zoek) ? '' : 'style="display: none;"'; ?>>
                     <td data-label="Code" class="cel-naam"><span class="code-tekst" data-geen-vertaling><?php echo esc(toonCadeauCode($b['code'])); ?></span></td>
                     <td data-label="Bedrag"><?php echo euroK($b['bedrag']); ?></td>
                     <td data-label="Saldo"><strong><?php echo euroK($b['saldo']); ?></strong></td>
@@ -248,6 +297,16 @@ include __DIR__ . '/beheer_kop.php';
                         <?php else: ?>
                             <span class="uitleg" style="font-size: 0.8rem;">Wordt geldig na betaling</span>
                         <?php endif; ?>
+                        <form method="POST" class="inline-form" onsubmit="return confirm('<?php
+                            echo $b['status'] === 'open'
+                                ? 'Deze cadeaubon staat nog op de rekening van tafel ' . intval($b['tafel']) . '. Verwijderen? Hij verdwijnt dan ook van die rekening.'
+                                : (floatval($b['saldo']) > 0 ? 'Cadeaubon ' . esc(toonCadeauCode($b['code'])) . ' verwijderen? Er staat nog ' . esc(euroK($b['saldo'])) . ' op. De gast kan hem daarna niet meer gebruiken.'
+                                                              : 'Cadeaubon ' . esc(toonCadeauCode($b['code'])) . ' verwijderen?'); ?>');">
+                            <?php echo csrfVeld(); ?>
+                            <input type="hidden" name="actie" value="cadeau_verwijder">
+                            <input type="hidden" name="id" value="<?php echo intval($b['id']); ?>">
+                            <button type="submit" class="btn-verwijder">Verwijderen</button>
+                        </form>
                     </td>
                 </tr>
             <?php endforeach; ?>
@@ -279,5 +338,30 @@ include __DIR__ . '/beheer_kop.php';
         </form>
     </div>
 </div>
+<script>
+    // Live zoeken: bij elke letter vallen de cadeaubonnen weg die niet passen
+    (function () {
+        const veld = document.getElementById('bon-zoek');
+        const wis = document.getElementById('bon-zoek-wis');
+        const geen = document.getElementById('geen-bon');
+        const rijen = document.querySelectorAll('tr.bon-rij');
+        function filter() {
+            const zoek = veld.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            let zichtbaar = 0;
+            rijen.forEach(tr => {
+                const code = tr.dataset.code;
+                const past = !zoek || ('LT' + code).includes(zoek) || code.includes(zoek);
+                tr.style.display = past ? '' : 'none';
+                if (past) zichtbaar++;
+            });
+            if (geen) geen.style.display = zichtbaar === 0 ? '' : 'none';
+            wis.style.display = zoek ? '' : 'none';
+        }
+        veld.addEventListener('input', filter);
+        wis.addEventListener('click', e => { e.preventDefault(); veld.value = ''; filter(); veld.focus(); });
+        // Enter hoeft de pagina niet te herladen
+        veld.form.addEventListener('submit', e => { e.preventDefault(); filter(); });
+    })();
+</script>
 </body>
 </html>

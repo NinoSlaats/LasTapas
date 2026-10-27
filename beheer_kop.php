@@ -11,7 +11,10 @@ $beheerPaginas = [
     'korting_beheer.php' => '🎁 Korting & cadeaubonnen',
     'statistieken.php'  => '📊 Statistieken',
     'qr_overzicht.php'  => '🔳 QR-codes',
+    'reserveringen.php' => '📅 Reserveringen',
 ];
+$rolNamen = ['baas' => 'Eigenaar', 'serveerster' => 'Serveerster', 'chef' => 'Chef-kok', 'bar' => 'Barman'];
+$mijnRol = $_SESSION['rol'] ?? '';
 ?>
 <!DOCTYPE html>
 <html lang="nl">
@@ -79,31 +82,78 @@ $beheerPaginas = [
             .cel-acties > * { flex: 1; text-align: center; }
             .cel-acties .btn-bewerk, .cel-acties .btn-verwijder { width: 100%; padding: 12px 10px; font-size: 0.95rem; }
         }
+
+        /* Kop: titel links, taal en (voor de baas) het uitklapmenu rechts; de paginaknoppen op een eigen rij eronder */
+        .header-flex { flex-wrap: wrap; }
+        .header-flex > div:first-child { flex: 1 1 260px; min-width: 0; }
+        .header-flex h1, .header-flex p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .header-knoppen { align-items: center; flex-shrink: 0; }
+        .kop-pagina-knoppen { flex: 1 1 100%; }
+        .kop-pagina-knoppen .nav-knoppen { display: flex; flex-wrap: wrap; }
+        /* ===== Rode kop (werkplek-pagina's), gelijk aan voorraad.php ===== */
+        body.met-rode-kop { padding: 0; }
+        body.met-rode-kop .container { margin: 30px auto; width: calc(100% - 40px); }
+        header.rode-kop { background: linear-gradient(135deg, #b33939, #822626); color: white; padding: 20px 30px; display: flex; justify-content: space-between;
+            align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); gap: 20px; }
+        .rode-kop .header-title h1 { margin: 0; font-size: 2rem; font-family: Georgia, serif; color: white; }
+        .rode-kop .header-title p { margin: 5px 0 0 0; opacity: 0.9; font-size: 0.95rem; }
+        .rode-kop .user-info { text-align: right; display: flex; align-items: center; gap: 12px; }
+        .rode-kop .user-info > div:last-child { display: flex; align-items: center; gap: 6px; }
+        @media (min-width: 701px) {
+            .rode-kop .header-title { flex: 1 1 auto; min-width: 0; }
+            .rode-kop .header-title h1, .rode-kop .header-title p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .rode-kop .user-info { flex: 0 0 auto; }
+        }
+        @media (min-width: 701px) and (max-width: 1365px) {
+            header.rode-kop { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px 20px; }
+            .rode-kop .user-info { display: contents; }
+            .rode-kop .user-details { grid-column: 2; grid-row: 1; white-space: nowrap; }
+            .rode-kop .user-info > div:last-child { grid-column: 1 / -1; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; padding-bottom: 2px; }
+            .rode-kop .user-info > div:last-child > :first-child { margin-left: auto; }
+        }
+        @media (max-width: 700px) {
+            header.rode-kop { flex-direction: column; align-items: stretch; gap: 12px; padding: 15px 16px; }
+            .rode-kop .header-title h1 { font-size: 1.3rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .rode-kop .header-title p { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.3; min-height: 2.6em; }
+            .rode-kop .user-info { flex-direction: column; align-items: stretch; gap: 10px; text-align: left; }
+            .rode-kop .user-info > div:last-child { flex-wrap: wrap; }
+            body.met-rode-kop .container { margin: 15px auto; width: calc(100% - 20px); }
+        }
         <?php echo $extraStijl ?? ''; ?>
     </style>
-    <script src="taal.js?v=20260928d" defer></script>
+    <script src="taal.js?v=20261007c" defer></script>
 </head>
+<?php if (!empty($rodeKop)): ?>
+<body class="met-rode-kop">
+<!-- Werkplek-pagina (bijv. Reserveringen): dezelfde rode kop als Keuken, Bar, Bediening en Voorraad -->
+<header class="rode-kop">
+    <div class="header-title">
+        <h1><?php echo esc($kopTitel ?? ('🍷 Las Tapas - ' . ($paginaTitel ?? ''))); ?></h1>
+        <p><?php echo esc($kopOndertitel ?? ''); ?></p>
+    </div>
+    <div class="user-info">
+        <div class="user-details">
+            <span>Ingelogd als: <strong data-geen-vertaling><?php echo esc($_SESSION['gebruiker'] ?? ''); ?></strong></span>
+        </div>
+        <div>
+            <span id="taal-plek" style="margin-right: 5px;"></span>
+            <?php require_once __DIR__ . '/navigatie.php'; toonNavigatie(); ?>
+        </div>
+    </div>
+</header>
+<div class="container">
+<?php else: ?>
 <body>
 <div class="container">
     <div class="header-flex">
         <div>
             <h1>🍷 Las Tapas - Beheer</h1>
-            <p>Welkom, <strong><?php echo esc($_SESSION['gebruiker'] ?? ''); ?></strong> (<?php echo $isBaas ? 'Eigenaar' : 'Serveerster'; ?>)</p>
+            <p>Welkom, <strong><?php echo esc($_SESSION['gebruiker'] ?? ''); ?></strong> (<?php echo esc($rolNamen[$mijnRol] ?? $mijnRol); ?>)</p>
         </div>
         <div class="header-knoppen">
             <span id="taal-plek"></span>
-            <?php if ($isBaas): ?>
-                <a href="chef.php" class="btn-uitlog" style="background: #27ae60;">🍳 Keuken</a>
-                <a href="bar.php" class="btn-uitlog" style="background: #8e44ad;">🍷 Bar</a>
-            <?php endif; ?>
-            <a href="serveerster.php" class="btn-uitlog" style="background: #2980b9;">🏃 Bediening</a>
-            <a href="logout.php" class="btn-uitlog">Uitloggen</a>
+            <?php require_once __DIR__ . '/navigatie.php'; toonOnderdeelMenu(); ?>
         </div>
+        <div class="kop-pagina-knoppen"><?php toonNavigatie(true); ?></div>
     </div>
-    <?php if ($isBaas): ?>
-    <nav class="beheer-nav">
-        <?php foreach ($beheerPaginas as $bestand => $label): ?>
-            <a href="<?php echo $bestand; ?>" class="<?php echo ($actievePagina ?? '') === $bestand ? 'actief' : ''; ?>"><?php echo $label; ?></a>
-        <?php endforeach; ?>
-    </nav>
     <?php endif; ?>

@@ -172,6 +172,26 @@ $isBar = $afdeling === 'bar';
             100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); }
         }
 
+        /* Nieuwe orders: zwevende knop en oplichten */
+        .nieuw-pijl {
+            position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 900;
+            background: #c0392b; color: white; border: none; border-radius: 30px; padding: 12px 22px;
+            font-size: 1.05rem; font-weight: bold; cursor: pointer; box-shadow: 0 6px 18px rgba(0,0,0,0.3);
+            display: flex; align-items: center; gap: 8px; font-family: inherit; animation: pijl-wip 1.4s ease-in-out infinite;
+            white-space: nowrap; max-width: calc(100vw - 32px);
+        }
+        .nieuw-pijl[hidden] { display: none; }
+        .nieuw-pijl .aantal { background: white; color: #c0392b; border-radius: 12px; padding: 1px 9px; }
+        @keyframes pijl-wip { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -5px); } }
+        .order-kaart.net-binnen { position: relative; animation: net-binnen 1.2s ease-in-out 6; box-shadow: 0 0 0 3px #f1c40f, 0 4px 12px rgba(0,0,0,0.08); }
+        @keyframes net-binnen { 50% { box-shadow: 0 0 0 6px rgba(241, 196, 15, 0.45), 0 4px 12px rgba(0,0,0,0.08); } }
+        .net-binnen-label { position: absolute; top: -11px; right: 14px; background: #f1c40f; color: #2d211d; font-size: 0.75rem;
+                            font-weight: bold; padding: 3px 10px; border-radius: 12px; }
+        @media (prefers-reduced-motion: reduce) { .nieuw-pijl, .order-kaart.net-binnen { animation: none; } }
+        .groep-kop { grid-column: 1 / -1; margin: 6px 0 -6px 0; font-size: 1.05rem; color: var(--grijs); font-family: inherit;
+                     border-bottom: 2px solid #eadfd3; padding-bottom: 6px; }
+        .groep-kop.actief { color: #c0392b; }
+        .groep-kop span { font-weight: normal; }
         .orders-raster {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -285,6 +305,11 @@ $isBar = $afdeling === 'bar';
 
 .btn-geluid { background: #8e44ad; color: white; border: none; cursor: pointer; margin-right: 5px; font-family: inherit; }
         .btn-geluid.uit { background: #7f8c8d; }
+        .geluid-balk { background: #fff3cd; color: #7d5a00; border-bottom: 2px solid #f1c40f; text-align: center; padding: 10px 16px;
+                       font-weight: bold; cursor: pointer; animation: geluid-knipper 1.6s ease-in-out infinite; }
+        .geluid-balk[hidden] { display: none; }
+        @keyframes geluid-knipper { 50% { background: #ffe8a1; } }
+        @media (prefers-reduced-motion: reduce) { .geluid-balk { animation: none; } }
         .opmerking-tag {
             background: #fff3cd; border-left: 4px solid #f39c12; color: #7d5a00;
             padding: 6px 10px; border-radius: 6px; font-weight: bold; font-size: 0.9rem; margin-top: 8px;
@@ -324,8 +349,46 @@ $isBar = $afdeling === 'bar';
             .tab-btn { padding: 8px 12px; font-size: 0.8rem; }
             .orders-raster { grid-template-columns: 1fr; }
         }
+            /* Kop gelijk houden in alle talen: titel en knoppen blijven op één regel
+           (te lange titels eindigen op een smal scherm met "…" in plaats van dat de balk hoger wordt) */
+        @media (min-width: 701px) {
+            header { gap: 20px; }
+            .header-title { flex: 1 1 auto; min-width: 0; }
+            .header-title h1, .header-title p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .user-info { flex: 0 0 auto; }
+        }
+        /* Tablet / klein laptopscherm: knoppen onder de titel, over de volle breedte */
+        @media (min-width: 701px) and (max-width: 1599px) {   /* keuken/bar: meer knoppen, dus eerder onder de titel */
+            header { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px 20px; }
+            .user-info { display: contents; }
+            .user-details { grid-column: 2; grid-row: 1; }
+            .user-info > div:last-child { grid-column: 1 / -1; display: flex; flex-wrap: nowrap; align-items: center; gap: 6px;
+                                           overflow-x: auto; scrollbar-width: thin; padding-bottom: 2px; }
+            /* Rechts uitlijnen als alles past; past het niet, dan schuift de rij (geen extra regel) */
+            .user-info > div:last-child > :first-child { margin-left: auto; }
+            .user-info > div:last-child .btn-actie { flex-shrink: 0; }
+            .user-info > div:last-child .btn-actie { margin: 0; }
+            .user-details, .user-details span, .btn-actie { white-space: nowrap; }
+        }
+            /* Telefoon: kop in elke taal even hoog (ondertitel altijd 2 regels ruimte, knoppen op één schuifbare rij) */
+        @media (max-width: 700px) {
+            .header-title { max-width: 100%; min-width: 0; }
+            .header-title h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .header-title p { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+                              line-height: 1.3; min-height: 2.6em; }
+            .user-info { flex-direction: column; align-items: stretch; gap: 10px; }
+            .user-details, .user-details span { white-space: nowrap; }
+            .user-info > div:last-child { display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; overflow-x: auto;
+                                          width: 100%; padding-bottom: 2px; scrollbar-width: thin; }
+            .user-info > div:last-child .btn-actie { flex-shrink: 0; margin: 0; white-space: nowrap; }
+            /* Etage-vakken: nooit breder dan het scherm (Engelse/Spaanse teksten zijn langer) */
+            .etage-rij { grid-template-columns: minmax(0, 1fr); }
+            .etage-box { min-width: 0; gap: 8px; }
+            .etage-box span { min-width: 0; }
+            .etage-box select { min-width: 0; flex: 0 1 55%; }
+        }
     </style>
-    <script src="taal.js?v=20260928d" defer></script>
+    <script src="taal.js?v=20261007c" defer></script>
 </head>
 <body>
 
@@ -346,38 +409,26 @@ $isBar = $afdeling === 'bar';
             <div>
                 <span id="taal-plek" style="margin-right: 5px;"></span>
                 <button id="geluid-knop" class="btn-actie btn-geluid uit" onclick="wisselGeluid()">🔕 Geluid uit</button>
-                <a href="voorraad.php" class="btn-actie btn-voorraad">📦 Voorraad</a>
-                
-                <?php if (isset($_SESSION['rol']) &&$_SESSION['rol'] === 'baas'): ?>
-                    <?php if ($isBar): ?>
-                        <a href="chef.php" class="btn-actie btn-switch">🍳 Naar Keuken</a>
-                    <?php else: ?>
-                        <a href="bar.php" class="btn-actie btn-switch">🍷 Naar Bar</a>
-                    <?php endif; ?>
-                    <a href="serveerster.php" class="btn-actie btn-switch">🏃‍♂️ Naar Serveerster Scherm</a>
-                <?php endif; ?>
-
-                <?php if (isset($_SESSION['rol']) &&$_SESSION['rol'] === 'baas'): ?>
-                    <a href="baas_paneel.php" class="btn-actie btn-baas">⚙️ Beheerderspaneel</a>
-                <?php endif; ?>
-                <a href="logout.php" class="btn-actie btn-uitlog">Uitloggen</a>
+                <?php require_once __DIR__ . '/navigatie.php'; toonNavigatie(); ?>
             </div>
         </div>
     </header>
+    <?php toonSectieTabs(); ?>
+    <div id="geluid-balk" class="geluid-balk" hidden onclick="ontgrendelGeluid()">🔔 Tik ergens op het scherm om het geluid van nieuwe orders aan te zetten</div>
 
     <div class="container">
         <div class="top-controls">
             <div class="etage-rij">
                 <div class="etage-box">
-                    <span>🏢 1e Etage (Tafels 1 - 10)</span>
+                    <span>🏢 Begane grond (Tafels 1 - 10)</span>
                     <select id="filter-etage-1">
-                        <option value="">-- Status 1e Etage tafels --</option>
+                        <option value="">-- Status tafels begane grond --</option>
                     </select>
                 </div>
                 <div class="etage-box">
-                    <span>🏢 2e Etage (Tafels 11 - 20)</span>
+                    <span>🏢 1e verdieping (Tafels 11 - 26)</span>
                     <select id="filter-etage-2">
-                        <option value="">-- Status 2e Etage tafels --</option>
+                        <option value="">-- Status tafels 1e verdieping --</option>
                     </select>
                 </div>
             </div>
@@ -385,10 +436,7 @@ $isBar = $afdeling === 'bar';
             <!-- Filter tabs -->
             <div class="filter-tabs">
                 <button class="tab-btn active" onclick="zetTab('alles', this)">
-                    Openstaande Orders 📂 <span id="nieuw-badge" class="badge-melding" style="display:none;">0</span>
-                </button>
-                <button class="tab-btn" onclick="zetTab('bezig', this)">
-                    Actieve Orders 🔥 <span id="bezig-badge" class="badge-melding" style="display:none;">0</span>
+                    Openstaande & Actieve Orders 🔥 <span id="nieuw-badge" class="badge-melding" style="display:none;">0</span>
                 </button>
                 <button class="tab-btn" onclick="zetTab('klaar', this)">Voltooide Orders ✅</button>
                 <button class="tab-btn" onclick="zetTab('bezorging', this)">Bezorgstatus 🏃‍♂️</button>
@@ -489,10 +537,30 @@ $isBar = $afdeling === 'bar';
             try { localStorage.setItem('geluid_aan', geluidAan ? '1' : '0'); } catch (e) {}
             if (geluidAan) { maakAudio(); speelPling(); }
             zetGeluidKnop();
+            setTimeout(updateGeluidBalk, 150);
         }
 
-        // Na de eerste tik op de pagina mag het geluid weer (als het aan stond)
-        document.addEventListener('click', () => { if (geluidAan) maakAudio(); }, { once: true });
+        // Browsers spelen pas geluid af na een aanraking OP DEZE pagina (een klik op de vorige pagina telt niet).
+        // Zolang dat nog niet gebeurd is en het geluid aan staat, tonen we een balk "tik om geluid aan te zetten".
+        function geluidGeblokkeerd() {
+            return geluidAan && (!audioCtx || audioCtx.state !== 'running');
+        }
+        function updateGeluidBalk() {
+            const balk = document.getElementById('geluid-balk');
+            if (balk) balk.hidden = !geluidGeblokkeerd();
+        }
+        function ontgrendelGeluid() {
+            if (!geluidAan) { updateGeluidBalk(); return; }
+            maakAudio();
+            if (audioCtx && audioCtx.state !== 'running') audioCtx.resume().then(updateGeluidBalk).catch(() => {});
+            setTimeout(updateGeluidBalk, 150);
+        }
+        // Elke aanraking telt: klikken, tikken of een toets
+        ['pointerdown', 'touchstart', 'keydown'].forEach(ev => document.addEventListener(ev, ontgrendelGeluid, { passive: true }));
+        document.addEventListener('DOMContentLoaded', () => {
+            if (geluidAan) maakAudio();          // sommige browsers staan het meteen toe
+            setTimeout(updateGeluidBalk, 400);   // anders verschijnt de balk
+        });
         document.addEventListener('DOMContentLoaded', zetGeluidKnop);
 
 
@@ -539,14 +607,15 @@ $isBar = $afdeling === 'bar';
                 updateTafelDropdowns();
                 updateNieuwBadge();
                 filterBestellingen();
+                updateNieuwPijl();
             })
             .catch(err => console.error('Fout bij ophalen keukendata:', err));
         }
 
         function updateTafelDropdowns() {
-            // Vul etage 1 (Tafels 1 t/m 10)
+            // Vul de begane grond (Tafels 1 t/m 10)
             const select1 = document.getElementById('filter-etage-1');
-            let html1 = '<option value="">-- Status 1e Etage tafels --</option>';
+            let html1 = '<option value="">-- Status tafels begane grond --</option>';
             for (let i = 1; i <= 10; i++) {
                 let tafelInfo = tafelsStatusCache[i];
                 let isBezet = tafelInfo && tafelInfo.status === 'bezet';
@@ -556,10 +625,10 @@ $isBar = $afdeling === 'bar';
             }
             select1.innerHTML = html1;
 
-            // Vul etage 2 (Tafels 11 t/m 20)
+            // Vul de eerste verdieping (Tafels 11 t/m 26)
             const select2 = document.getElementById('filter-etage-2');
-            let html2 = '<option value="">-- Status 2e Etage tafels --</option>';
-            for (let i = 11; i <= 20; i++) {
+            let html2 = '<option value="">-- Status tafels 1e verdieping --</option>';
+            for (let i = 11; i <= 26; i++) {
                 let tafelInfo = tafelsStatusCache[i];
                 let isBezet = tafelInfo && tafelInfo.status === 'bezet';
                 let statusTekst = isBezet ? `Bezet (${esc(tafelInfo.gast_naam || 'Gast')})` : 'Open';
@@ -581,20 +650,59 @@ $isBar = $afdeling === 'bar';
         }
 
         let bekendeNieuweOrders = null;   // null = eerste keer laden (dan nog geen geluid)
+        const netBinnen = {};              // order-id -> tijdstip waarop hij binnenkwam (voor het oplichten)
+        const OPLICHTEN_MS = 20000;        // zo lang licht een net binnengekomen order op
 
         function controleerNieuweOrders() {
             const nieuw = alleBestellingenCache.filter(o => o.status === 'nieuw').map(o => String(o.id));
-            if (bekendeNieuweOrders !== null && nieuw.some(id => !bekendeNieuweOrders.has(id))) {
-                speelPling();
+            if (bekendeNieuweOrders !== null) {
+                const binnen = nieuw.filter(id => !bekendeNieuweOrders.has(id));
+                if (binnen.length) speelPling();
+                binnen.forEach(id => { netBinnen[id] = Date.now(); });
             }
             bekendeNieuweOrders = new Set(nieuw);
         }
 
+        // ===== Zwevende knop: nieuwe orders die buiten beeld staan =====
+        function updateNieuwPijl() {
+            const knop = document.getElementById('nieuw-pijl');
+            const aantalNieuw = alleBestellingenCache.filter(o => o.status === 'nieuw').length;
+            let richting = '', aantal = 0;
+            if (aantalNieuw > 0 && huidigeTab !== 'alles') {
+                // Op een ander tabblad: knop brengt je naar de nieuwe orders
+                richting = '📂'; aantal = aantalNieuw;
+            } else if (aantalNieuw > 0) {
+                const kaarten = [...document.querySelectorAll('.order-kaart[data-status="nieuw"]')];
+                const onder = kaarten.filter(k => k.getBoundingClientRect().top > window.innerHeight - 80);
+                const boven = kaarten.filter(k => k.getBoundingClientRect().bottom < 60);
+                if (onder.length) { richting = '⬇'; aantal = onder.length; }
+                else if (boven.length) { richting = '⬆'; aantal = boven.length; }
+            }
+            if (!aantal) { knop.hidden = true; return; }
+            knop.querySelector('.pijl').textContent = richting;
+            knop.querySelector('.aantal').textContent = aantal;
+            knop.querySelector('.tekst').textContent = aantal === 1 ? 'nieuwe order' : 'nieuwe orders';
+            knop.hidden = false;
+        }
+
+        function naarNieuweOrders() {
+            if (huidigeTab !== 'alles') {
+                zetTab('alles', document.querySelector('.filter-tabs .tab-btn'));
+            }
+            const kaarten = [...document.querySelectorAll('.order-kaart[data-status="nieuw"]')];
+            // Eerst de nieuwe order die nog buiten beeld staat, anders het kopje "Openstaand"
+            const doel = kaarten.find(k => k.getBoundingClientRect().top > window.innerHeight - 80 || k.getBoundingClientRect().bottom < 60)
+                      || document.querySelector('.groep-kop:not(.actief)') || kaarten[0];
+            if (doel) window.scrollTo({ top: doel.getBoundingClientRect().top + window.scrollY - 90, behavior: 'smooth' });
+        }
+        window.addEventListener('scroll', updateNieuwPijl, { passive: true });
+        window.addEventListener('resize', updateNieuwPijl);
+
         function updateNieuwBadge() {
             controleerNieuweOrders();
             // Openstaande (nieuwe) orders en actieve orders (in bereiding) krijgen een melding
-            zetBadge('nieuw-badge', alleBestellingenCache.filter(o => o.status === 'nieuw').length);
-            zetBadge('bezig-badge', alleBestellingenCache.filter(o => o.status === 'bezig').length);
+            // Eén tabblad voor openstaand + actief: de melding telt alle orders die nog gemaakt moeten worden
+            zetBadge('nieuw-badge', alleBestellingenCache.filter(o => o.status === 'nieuw' || o.status === 'bezig').length);
         }
 
         function zetTab(tab, element) {
@@ -609,9 +717,8 @@ $isBar = $afdeling === 'bar';
             let data = alleBestellingenCache;
 
             if (huidigeTab === 'alles') {
-                data = data.filter(o => o.status === 'nieuw');
-            } else if (huidigeTab === 'bezig') {
-                data = data.filter(o => o.status === 'bezig');
+                // Actieve orders (in bereiding) bovenaan, daaronder de nieuwe orders die nog opgepakt moeten worden
+                data = [...data.filter(o => o.status === 'bezig'), ...data.filter(o => o.status === 'nieuw')];
             } else if (huidigeTab === 'klaar') {
                 data = data.filter(o => o.status === 'klaar');
             } else if (huidigeTab === 'bezorging') {
@@ -623,7 +730,16 @@ $isBar = $afdeling === 'bar';
                 return;
             }
 
-            raster.innerHTML = data.map(order => {
+            // Kopjes tussen de groepen op het tabblad "Openstaande & Actieve Orders"
+            const kopje = (order, i) => {
+                if (huidigeTab !== 'alles' || (i > 0 && data[i - 1].status === order.status)) return '';
+                const aantal = data.filter(o => o.status === order.status).length;
+                return order.status === 'bezig'
+                    ? `<h3 class="groep-kop actief">🔥 Actief: in bereiding <span>(${aantal})</span></h3>`
+                    : `<h3 class="groep-kop">📂 Openstaand: nog oppakken <span>(${aantal})</span></h3>`;
+            };
+
+            raster.innerHTML = data.map((order, i) => {
                 let statusKlasse = order.status || 'nieuw';
 
 
@@ -635,8 +751,9 @@ $isBar = $afdeling === 'bar';
                     voorraadWaarschuwing = `<div style="background: #fadbd8; color: #c0392b; padding: 6px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; margin-top: 8px; border-left: 4px solid #c0392b;">⚠️ Let op: Nog maar ${order.voorraad_aantal} over in voorraad!</div>`;
                 }
 
-                return `
-                    <div class="order-kaart ${esc(statusKlasse)}">
+                return kopje(order, i) + `
+                    <div class="order-kaart ${esc(statusKlasse)}${order.status === 'nieuw' && netBinnen[order.id] && Date.now() - netBinnen[order.id] < OPLICHTEN_MS ? ' net-binnen' : ''}" data-status="${esc(statusKlasse)}">
+                        ${order.status === 'nieuw' && netBinnen[order.id] && Date.now() - netBinnen[order.id] < OPLICHTEN_MS ? '<span class="net-binnen-label">🆕 Net binnen</span>' : ''}
                         <div>
                             <div class="order-header">
                                 <h3>Mesa ${order.tafel} (Tafel)</h3>
@@ -697,7 +814,7 @@ $isBar = $afdeling === 'bar';
             document.getElementById('aanpas-titel').innerText = `Mesa ${order.tafel} (Tafel)`;
             document.getElementById('aanpas-melding').innerText = '';
             const kies = document.getElementById('aanpas-nieuw');
-            const groepen = { voorgerecht: 'Voorgerechten', hoofdgerecht: 'Warme tapas', drankje: 'Drankjes', toetje: 'Toetjes' };
+            const groepen = { voorgerecht: 'Koude tapas', hoofdgerecht: 'Warme tapas', specialiteit: 'Specialiteiten', toetje: 'Toetjes', drankje: 'Drankjes' };
             kies.innerHTML = '<option value="">➕ Gerecht toevoegen...</option>' + Object.entries(groepen).filter(([cat]) => menuLijst.some(m => m.categorie === cat)).map(([cat, label]) =>
                 `<optgroup label="${esc(label)}">` + menuLijst.filter(m => m.categorie === cat)
                     .map(m => `<option value="${esc(m.naam)}">${esc(m.naam)}</option>`).join('') + '</optgroup>'
@@ -802,5 +919,9 @@ $isBar = $afdeling === 'bar';
         setInterval(laadData, 3000);
         laadData();
     </script>
+    <!-- Zwevende knop: er staan nieuwe orders buiten beeld -->
+    <button type="button" id="nieuw-pijl" class="nieuw-pijl" hidden onclick="naarNieuweOrders()">
+        <span class="pijl">⬇</span> <span class="aantal" data-geen-vertaling>1</span> <span class="tekst">nieuwe order</span>
+    </button>
 </body>
 </html>

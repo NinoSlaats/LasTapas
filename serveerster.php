@@ -262,8 +262,25 @@ if (!isset($_SESSION['rol']) || ($_SESSION['rol'] !== 'serveerster' &&$_SESSION[
         .rekening { background: #fcf8f2; border: 1px solid #e0d5cb; border-radius: 8px; padding: 8px 10px; margin: 8px 0; }
         .rekening-regel { display: flex; justify-content: space-between; gap: 10px; font-size: 0.85rem; padding: 2px 0; }
         .rekening-totaal { display: flex; justify-content: space-between; font-weight: bold; border-top: 1px solid #e0d5cb; margin-top: 4px; padding-top: 5px; }
+        .res-blok { grid-column: 1 / -1; background: #eef4fb; border: 2px solid #1f4e8c; border-radius: 12px; padding: 12px 14px; }
+        .res-kop { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-weight: bold; color: #1f4e8c; margin-bottom: 8px; }
+        .res-kop a { color: #1f4e8c; font-size: 0.9rem; }
+        .res-rij { display: grid; grid-template-columns: 56px 110px 1fr 56px auto; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid #d6e2f0; font-size: 0.92rem; }
+        .res-rij.binnen { opacity: 0.65; }
+        .res-st { font-size: 0.8rem; font-weight: bold; }
+        .res-waarschuwing { background: #eef4fb; color: #1f4e8c; padding: 6px 10px; border-radius: 8px; }
+        @media (max-width: 600px) { .res-rij { grid-template-columns: 50px 70px 1fr; } .res-rij > span:nth-child(4), .res-rij .res-st { grid-column: auto; } }
         .btn-geluid { background: #8e44ad; color: white; border: none; cursor: pointer; margin-right: 5px; font-family: inherit; }
         .btn-geluid.uit { background: #7f8c8d; }
+        .geluid-balk { background: #fff3cd; color: #7d5a00; border-bottom: 2px solid #f1c40f; text-align: center; padding: 10px 16px;
+                       font-weight: bold; cursor: pointer; animation: geluid-knipper 1.6s ease-in-out infinite; }
+        .geluid-balk[hidden] { display: none; }
+        @keyframes geluid-knipper { 50% { background: #ffe8a1; } }
+        @media (prefers-reduced-motion: reduce) { .geluid-balk { animation: none; } }
+        .groep-kop { grid-column: 1 / -1; margin: 6px 0 -6px 0; font-size: 1.05rem; color: var(--grijs); font-family: inherit;
+                     border-bottom: 2px solid #eadfd3; padding-bottom: 6px; }
+        .groep-kop.actief { color: #2980b9; }
+        .groep-kop span { font-weight: normal; }
         .afdeling-tag { font-size: 0.7rem; font-weight: bold; padding: 2px 8px; border-radius: 10px; vertical-align: middle; margin-left: 4px; white-space: nowrap; }
         .afdeling-tag.keuken { background: #eafaf1; color: #1e8449; }
         .afdeling-tag.bar { background: #f4ecf7; color: #6c3483; }
@@ -313,8 +330,46 @@ if (!isset($_SESSION['rol']) || ($_SESSION['rol'] !== 'serveerster' &&$_SESSION[
             .tab-btn { padding: 8px 12px; font-size: 0.8rem; }
             .orders-raster { grid-template-columns: 1fr; }
         }
+            /* Kop gelijk houden in alle talen: titel en knoppen blijven op één regel
+           (te lange titels eindigen op een smal scherm met "…" in plaats van dat de balk hoger wordt) */
+        @media (min-width: 701px) {
+            header { gap: 20px; }
+            .header-title { flex: 1 1 auto; min-width: 0; }
+            .header-title h1, .header-title p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .user-info { flex: 0 0 auto; }
+        }
+        /* Tablet / klein laptopscherm: knoppen onder de titel, over de volle breedte */
+        @media (min-width: 701px) and (max-width: 1365px) {
+            header { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px 20px; }
+            .user-info { display: contents; }
+            .user-details { grid-column: 2; grid-row: 1; }
+            .user-info > div:last-child { grid-column: 1 / -1; display: flex; flex-wrap: nowrap; align-items: center; gap: 6px;
+                                           overflow-x: auto; scrollbar-width: thin; padding-bottom: 2px; }
+            /* Rechts uitlijnen als alles past; past het niet, dan schuift de rij (geen extra regel) */
+            .user-info > div:last-child > :first-child { margin-left: auto; }
+            .user-info > div:last-child .btn-actie { flex-shrink: 0; }
+            .user-info > div:last-child .btn-actie { margin: 0; }
+            .user-details, .user-details span, .btn-actie { white-space: nowrap; }
+        }
+            /* Telefoon: kop in elke taal even hoog (ondertitel altijd 2 regels ruimte, knoppen op één schuifbare rij) */
+        @media (max-width: 700px) {
+            .header-title { max-width: 100%; min-width: 0; }
+            .header-title h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .header-title p { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+                              line-height: 1.3; min-height: 2.6em; }
+            .user-info { flex-direction: column; align-items: stretch; gap: 10px; }
+            .user-details, .user-details span { white-space: nowrap; }
+            .user-info > div:last-child { display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; overflow-x: auto;
+                                          width: 100%; padding-bottom: 2px; scrollbar-width: thin; }
+            .user-info > div:last-child .btn-actie { flex-shrink: 0; margin: 0; white-space: nowrap; }
+            /* Etage-vakken: nooit breder dan het scherm (Engelse/Spaanse teksten zijn langer) */
+            .etage-rij { grid-template-columns: minmax(0, 1fr); }
+            .etage-box { min-width: 0; gap: 8px; }
+            .etage-box span { min-width: 0; }
+            .etage-box select { min-width: 0; flex: 0 1 55%; }
+        }
     </style>
-    <script src="taal.js?v=20260928d" defer></script>
+    <script src="taal.js?v=20261007c" defer></script>
 </head>
 <body>
 
@@ -330,31 +385,26 @@ if (!isset($_SESSION['rol']) || ($_SESSION['rol'] !== 'serveerster' &&$_SESSION[
             <div>
                 <span id="taal-plek" style="margin-right: 5px;"></span>
                 <button id="geluid-knop" class="btn-actie btn-geluid uit" onclick="wisselGeluid()">🔕 Geluid uit</button>
-                <?php if (isset($_SESSION['rol']) &&$_SESSION['rol'] === 'baas'): ?>
-                    <a href="chef.php" class="btn-actie btn-switch">🍳 Naar Keuken Scherm</a>
-                <?php endif; ?>
-
-                <?php if (isset($_SESSION['rol']) &&$_SESSION['rol'] === 'baas'): ?>
-                    <a href="baas_paneel.php" class="btn-actie btn-baas">⚙️ Beheerderspaneel</a>
-                <?php endif; ?>
-                <a href="logout.php" class="btn-actie btn-uitlog">Uitloggen</a>
+                <?php require_once __DIR__ . '/navigatie.php'; toonNavigatie(); ?>
             </div>
         </div>
     </header>
+    <?php toonSectieTabs(); ?>
+    <div id="geluid-balk" class="geluid-balk" hidden onclick="ontgrendelGeluid()">🔔 Tik ergens op het scherm om het geluid van meldingen aan te zetten</div>
 
     <div class="container">
         <div class="top-controls">
             <div class="etage-rij">
                 <div class="etage-box">
-                    <span>🏢 1e Etage (Tafels 1 - 10)</span>
+                    <span>🏢 Begane grond (Tafels 1 - 10)</span>
                     <select id="filter-etage-1">
-                        <option value="">-- Status 1e Etage tafels --</option>
+                        <option value="">-- Status tafels begane grond --</option>
                     </select>
                 </div>
                 <div class="etage-box">
-                    <span>🏢 2e Etage (Tafels 11 - 20)</span>
+                    <span>🏢 1e verdieping (Tafels 11 - 26)</span>
                     <select id="filter-etage-2">
-                        <option value="">-- Status 2e Etage tafels --</option>
+                        <option value="">-- Status tafels 1e verdieping --</option>
                     </select>
                 </div>
             </div>
@@ -362,10 +412,7 @@ if (!isset($_SESSION['rol']) || ($_SESSION['rol'] !== 'serveerster' &&$_SESSION[
             <!-- Filter tabs met omgedraaide volgorde en 'Bezorgd' tabblad -->
             <div class="filter-tabs">
                 <button class="tab-btn active" onclick="zetTab('klaar', this)" style="position: relative;">
-                    Klaar om te serveren 🟢 <span id="klaar-badge" class="badge-melding" style="display:none;">0</span>
-                </button>
-                <button class="tab-btn" onclick="zetTab('onderweg', this)" style="position: relative;">
-                    Onderweg / Uitgeserveerd 🏃‍♂️ <span id="onderweg-badge" class="badge-melding" style="display:none;">0</span>
+                    Klaar & Onderweg 🏃‍♂️ <span id="klaar-badge" class="badge-melding" style="display:none;">0</span>
                 </button>
                 <button class="tab-btn" onclick="zetTab('bezorgd_tab', this)" style="position: relative;">
                     Bezorgd ✅
@@ -455,12 +502,17 @@ if (!isset($_SESSION['rol']) || ($_SESSION['rol'] !== 'serveerster' &&$_SESSION[
             });
 
             const select1 = document.getElementById('filter-etage-1');
-            let html1 = '<option value="">-- Status 1e Etage tafels --</option>';
+            let html1 = '<option value="">-- Status tafels begane grond --</option>';
             for (let i = 1; i <= 10; i++) {
                 let isBezet = bezetteTafels.has(i);
                 let tafelInfo = tafelsStatusCache[i];
                 let statusTekst = isBezet ? 'Bezet' : 'Open';
                 let emoji = isBezet ? '🔴' : '🟢';
+                const res = reserveringVoorTafel(i);
+                if (res && !isBezet && !tafelInfo) {
+                    statusTekst = res.status === 'aangekomen' ? 'Gast aangekomen' : `Gereserveerd ${res.tijd}`;
+                    emoji = '📅';
+                }
                 if (tafelInfo && tafelInfo.status === 'betalen') {
                     statusTekst = 'WIL BETALEN!';
                     emoji = '💳';
@@ -480,12 +532,17 @@ if (!isset($_SESSION['rol']) || ($_SESSION['rol'] !== 'serveerster' &&$_SESSION[
             select1.innerHTML = html1;
 
             const select2 = document.getElementById('filter-etage-2');
-            let html2 = '<option value="">-- Status 2e Etage tafels --</option>';
-            for (let i = 11; i <= 20; i++) {
+            let html2 = '<option value="">-- Status tafels 1e verdieping --</option>';
+            for (let i = 11; i <= 26; i++) {
                 let isBezet = bezetteTafels.has(i);
                 let tafelInfo = tafelsStatusCache[i];
                 let statusTekst = isBezet ? 'Bezet' : 'Open';
                 let emoji = isBezet ? '🔴' : '🟢';
+                const res = reserveringVoorTafel(i);
+                if (res && !isBezet && !tafelInfo) {
+                    statusTekst = res.status === 'aangekomen' ? 'Gast aangekomen' : `Gereserveerd ${res.tijd}`;
+                    emoji = '📅';
+                }
                 if (tafelInfo && tafelInfo.status === 'betalen') {
                     statusTekst = 'WIL BETALEN!';
                     emoji = '💳';
@@ -562,10 +619,30 @@ if (!isset($_SESSION['rol']) || ($_SESSION['rol'] !== 'serveerster' &&$_SESSION[
             try { localStorage.setItem('geluid_aan', geluidAan ? '1' : '0'); } catch (e) {}
             if (geluidAan) { maakAudio(); speelPling(); }
             zetGeluidKnop();
+            setTimeout(updateGeluidBalk, 150);
         }
 
-        // Na de eerste tik op de pagina mag het geluid weer (als het aan stond)
-        document.addEventListener('click', () => { if (geluidAan) maakAudio(); }, { once: true });
+        // Browsers spelen pas geluid af na een aanraking OP DEZE pagina (een klik op de vorige pagina telt niet).
+        // Zolang dat nog niet gebeurd is en het geluid aan staat, tonen we een balk "tik om geluid aan te zetten".
+        function geluidGeblokkeerd() {
+            return geluidAan && (!audioCtx || audioCtx.state !== 'running');
+        }
+        function updateGeluidBalk() {
+            const balk = document.getElementById('geluid-balk');
+            if (balk) balk.hidden = !geluidGeblokkeerd();
+        }
+        function ontgrendelGeluid() {
+            if (!geluidAan) { updateGeluidBalk(); return; }
+            maakAudio();
+            if (audioCtx && audioCtx.state !== 'running') audioCtx.resume().then(updateGeluidBalk).catch(() => {});
+            setTimeout(updateGeluidBalk, 150);
+        }
+        // Elke aanraking telt: klikken, tikken of een toets
+        ['pointerdown', 'touchstart', 'keydown'].forEach(ev => document.addEventListener(ev, ontgrendelGeluid, { passive: true }));
+        document.addEventListener('DOMContentLoaded', () => {
+            if (geluidAan) maakAudio();          // sommige browsers staan het meteen toe
+            setTimeout(updateGeluidBalk, 400);   // anders verschijnt de balk
+        });
         document.addEventListener('DOMContentLoaded', zetGeluidKnop);
 
         let bekendeMeldingen = null;   // null = eerste keer laden (dan nog geen geluid)
@@ -598,8 +675,9 @@ if (!isset($_SESSION['rol']) || ($_SESSION['rol'] !== 'serveerster' &&$_SESSION[
                 if (tafelsStatusCache[t].oproep_status === 'open') openOproepen++;
             }
             zetBadge('oproep-badge', openOproepen);
-            let klaarCount = telKaarten('klaar');
-            let onderwegCount = telKaarten('onderweg');
+            // Eén tabblad voor klaar + onderweg: de melding telt alles wat nog gebracht moet worden
+            let klaarCount = telKaarten('klaar') + telKaarten('onderweg');
+            let onderwegCount = 0;
 
             // Alleen 'betalen' (nog niet geaccepteerd) telt als nieuwe melding.
             // Zodra een serveerster een verzoek heeft geaccepteerd, is het al 'in behandeling'.
@@ -622,15 +700,40 @@ if (!isset($_SESSION['rol']) || ($_SESSION['rol'] !== 'serveerster' &&$_SESSION[
             filterBestellingen();
         }
 
+        // ---------- Reserveringen van vandaag (elke 30 seconden verversen) ----------
+        let reserveringenVandaag = [];
+        function laadReserveringenVandaag() {
+            fetch('reservering_api.php?actie=vandaag', { cache: 'no-store' })
+                .then(r => r.json())
+                .then(d => { if (d.succes) { reserveringenVandaag = d.reserveringen; if (huidigeTab === 'tafels') filterBestellingen(); } })
+                .catch(() => {});
+        }
+        function reserveringVoorTafel(nr) {
+            return reserveringenVandaag.find(r => r.tafels.includes(nr)) || null;
+        }
+        function reserveringenBlok() {
+            if (reserveringenVandaag.length === 0) return '';
+            const rijen = reserveringenVandaag.map(r => `
+                <div class="res-rij ${r.status === 'aangekomen' ? 'binnen' : ''}">
+                    <strong data-geen-vertaling>${esc(r.tijd)}</strong>
+                    <span>Tafel <b data-geen-vertaling>${esc(r.tafel_tekst)}</b></span>
+                    <span data-geen-vertaling>${esc(r.naam)}</span>
+                    <span>👥 <span data-geen-vertaling>${r.personen}</span></span>
+                    <span class="res-st">${r.status === 'aangekomen' ? '✅ Aangekomen' : '⏳ Verwacht'}</span>
+                </div>`).join('');
+            return `<div class="res-blok"><div class="res-kop"><span>📅 Reserveringen vandaag</span><a href="reserveringen.php">Alle reserveringen →</a></div>${rijen}</div>`;
+        }
+
         function tekenTafelsOverzicht(raster) {
             const actief = Object.values(tafelsStatusCache).sort((a, b) => a.tafel - b.tafel);
             if (actief.length === 0) {
-                raster.innerHTML = '<div class="geen-orders">Er zijn op dit moment geen tafels in gebruik.</div>';
+                raster.innerHTML = reserveringenBlok() + '<div class="geen-orders">Er zijn op dit moment geen tafels in gebruik.</div>';
                 return;
             }
             const statusTekst = { bezet: 'Bezet', betalen: 'Wil betalen', geaccepteerd: 'Betaling onderweg' };
-            raster.innerHTML = actief.map(info => {
+            raster.innerHTML = reserveringenBlok() + actief.map(info => {
                 const tijdOm = info.status === 'bezet' && info.seconden_over !== null && info.seconden_over <= 0;
+                const res = reserveringenVandaag.find(r => r.tafels.includes(Number(info.tafel)) && r.status === 'gepland');
                 const tijd = info.eind_tijd_kort
                     ? (tijdOm ? `⏰ <strong>Tijd is om</strong> (was ${esc(info.eind_tijd_kort)})` : `🕘 Dineren tot <strong>${esc(info.eind_tijd_kort)}</strong>`)
                     : '🕘 Nog niets besteld';
@@ -646,6 +749,7 @@ if (!isset($_SESSION['rol']) || ($_SESSION['rol'] !== 'serveerster' &&$_SESSION[
                                 <p><strong>Gast naam:</strong> ${esc(info.gast_naam || 'Onbekend')}</p>
                                 <p><strong>Gezelschap:</strong> ${esc(info.gezelschap || '-')}</p>
                                 <p>${tijd}</p>
+                                ${res ? `<p class="res-waarschuwing">📅 Om <strong data-geen-vertaling>${esc(res.tijd)}</strong> gereserveerd voor <strong data-geen-vertaling>${esc(res.naam)}</strong></p>` : ''}
                                 <p><small style="color: var(--grijs);">Laatste activiteit: ${esc(info.laatste_activiteit_kort || '-')}</small></p>
                                 <p><strong>Rekening tot nu toe:</strong> ${info.rekening ? euro(info.rekening.totaal) : '-'}</p>
                             </div>
@@ -745,7 +849,7 @@ if (!isset($_SESSION['rol']) || ($_SESSION['rol'] !== 'serveerster' &&$_SESSION[
                 let betalendeTafelsHtml = '';
                 let aantalBetalingen = 0;
 
-                for (let t = 1; t <= 20; t++) {
+                for (let t = 1; t <= 26; t++) {
                     let info = tafelsStatusCache[t];
                     if (info && (info.status === 'betalen' || info.status === 'geaccepteerd')) {
                         aantalBetalingen++;
@@ -797,19 +901,28 @@ if (!isset($_SESSION['rol']) || ($_SESSION['rol'] !== 'serveerster' &&$_SESSION[
                 return;
             }
 
-            const tabStatus = { klaar: 'klaar', onderweg: 'onderweg', bezorgd_tab: 'bezorgd' }[huidigeTab];
-
             // Keuken- en bardeel van dezelfde bestelling komen samen op één kaart
-            const kaarten = maakGroepen(alleBestellingenCache)
-                .map(groep => ({ groep, delen: tabStatus ? groep.filter(o => o.status === tabStatus) : groep }))
+            const kaartenMet = status => maakGroepen(alleBestellingenCache)
+                .map(groep => ({ groep, delen: groep.filter(o => o.status === status) }))
                 .filter(k => k.delen.length);
+
+            // Tabblad "Klaar & Onderweg": wat je al aan het brengen bent bovenaan, daaronder wat klaarstaat
+            let kaarten;
+            if (huidigeTab === 'klaar') {
+                const onderweg = kaartenMet('onderweg'), klaar = kaartenMet('klaar');
+                if (onderweg.length) onderweg[0].kop = `<h3 class="groep-kop actief">🏃‍♂️ Onderweg: ben je aan het brengen <span>(${onderweg.length})</span></h3>`;
+                if (klaar.length) klaar[0].kop = `<h3 class="groep-kop">🟢 Klaar: kan opgehaald worden <span>(${klaar.length})</span></h3>`;
+                kaarten = [...onderweg, ...klaar];
+            } else {
+                kaarten = kaartenMet(huidigeTab === 'bezorgd_tab' ? 'bezorgd' : huidigeTab);
+            }
 
             if (kaarten.length === 0) {
                 raster.innerHTML = '<div class="geen-orders">Geen bestellingen gevonden in deze categorie.</div>';
                 return;
             }
 
-            raster.innerHTML = kaarten.map(({ groep, delen }) => {
+            raster.innerHTML = kaarten.map(({ groep, delen, kop }) => {
                 const eerste = delen[0];
                 const statusKlasse = eerste.status || 'nieuw';
                 const ids = JSON.stringify(delen.map(o => Number(o.id)));
@@ -818,7 +931,7 @@ if (!isset($_SESSION['rol']) || ($_SESSION['rol'] !== 'serveerster' &&$_SESSION[
                 const opmerkingen = [...new Set(delen.map(o => o.opmerking).filter(Boolean))];
                 const bezorgers = [...new Set(delen.map(o => o.serveerster_naam).filter(Boolean))];
 
-                return `
+                return (kop || '') + `
                     <div class="order-kaart ${esc(statusKlasse)}">
                         <div>
                             <div class="order-header">
@@ -948,6 +1061,8 @@ if (!isset($_SESSION['rol']) || ($_SESSION['rol'] !== 'serveerster' &&$_SESSION[
         }
 
         setInterval(laadData, 3000);
+        laadReserveringenVandaag();
+        setInterval(laadReserveringenVandaag, 30000);
         laadData();
     </script>
 </body>

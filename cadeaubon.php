@@ -10,9 +10,11 @@ $invoer = trim((string)($_GET['code'] ?? ''));
 $bon = null;
 $melding = '';
 
+$functieAan = true;
 try {
     db();
-    if ($invoer !== '') {
+    $functieAan = kortingFunctieAan();
+    if ($invoer !== '' && $functieAan) {
         // Tegen raden: maximaal 20 opvragingen per 15 minuten per apparaat
         $sleutel = 'saldo-' . ($_SERVER['REMOTE_ADDR'] ?? '');
         $n = intval(q("SELECT COUNT(*) AS n FROM login_pogingen WHERE gebruikersnaam = ? AND tijd > (NOW() - INTERVAL 15 MINUTE)",
@@ -86,7 +88,7 @@ function euroBon($bedrag) {
             .bon { box-shadow: none; border: 1px solid #ccc; }
         }
     </style>
-    <script src="taal.js?v=20260928d" defer></script>
+    <script src="taal.js?v=20261007c" defer></script>
 </head>
 <body>
     <div class="boven">
@@ -94,7 +96,12 @@ function euroBon($bedrag) {
         <span id="taal-plek"></span>
     </div>
 
-<?php if ($bon && $bon['status'] !== 'open'): ?>
+<?php if (!$functieAan): ?>
+    <div class="zoek">
+        <h1>🎁 Cadeaubonnen</h1>
+        <p class="uitleg" style="text-align: left;">Cadeaubonnen zijn op dit moment niet beschikbaar. Vraag het personeel als je een vraag hebt over je cadeaubon.</p>
+    </div>
+<?php elseif ($bon && $bon['status'] !== 'open'): ?>
     <?php
         $leeg = floatval($bon['saldo']) <= 0;
         $statusKlasse = $bon['status'] === 'geblokkeerd' ? 'geblokkeerd' : ($leeg ? 'leeg' : 'actief');

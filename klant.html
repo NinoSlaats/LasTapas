@@ -381,7 +381,13 @@
         }
 
         /* Allergenen, opmerking en ronde */
-        .allergie-info { font-size: 0.8rem; color: var(--grijs); margin: 4px 0 0 0; }
+        .allergie-info { font-size: 0.8rem; color: var(--grijs); margin: 0; }
+        .allergie-rij { display: flex; align-items: center; justify-content: space-between; gap: 8px 14px; flex-wrap: wrap; margin: 4px 0 0 0; }
+        .allergie-schakel { display: inline-flex; align-items: center; gap: 7px; font-size: 0.85rem; font-weight: bold; color: var(--inkt);
+            background: #fff3e6; border: 1px solid #f2e3d3; border-radius: 20px; padding: 5px 12px 5px 9px; cursor: pointer; user-select: none; white-space: nowrap; }
+        .allergie-schakel input { width: 17px; height: 17px; margin: 0; accent-color: var(--rood, #a8232b); cursor: pointer; }
+        /* Allergenen bij de gerechten alleen tonen als de gast het vinkje aanzet */
+        body:not(.toon-allergenen) .allergenen { display: none !important; }
         .allergenen { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 6px 0 !important; }
         .allergeen { background: #fff3e6; border: 1px solid #f2e3d3; border-radius: 10px; padding: 1px 7px; font-size: 0.7rem; color: var(--inkt); white-space: nowrap; }
         .opmerking-label { display: block; font-size: 0.8rem; font-weight: bold; color: var(--grijs); margin-bottom: 4px; }
@@ -457,7 +463,8 @@
         }
 
         /* Privacy */
-        /* Kortingscode, cadeaubon */
+        /* Kortingscode, cadeaubon (extra functie: alleen zichtbaar als de baas hem heeft aangezet) */
+        body:not(.korting-aan) .alleen-korting { display: none !important; }
         .code-blok { background: #fffdf8; border: 1px dashed #e0ccb8; border-radius: 10px; padding: 10px 12px; margin: 0 0 12px 0; text-align: left; }
         .code-rij { display: flex; gap: 8px; }
         .code-rij input { flex: 1; min-width: 0; padding: 10px; border: 1px solid #e0ccb8; border-radius: 6px; font-size: 16px; font-family: inherit; text-transform: uppercase; }
@@ -478,6 +485,8 @@
         .cadeau-resultaat a { color: var(--azul); font-weight: bold; font-size: 0.85rem; }
         @media (max-width: 420px) { .cadeau-bedragen { grid-template-columns: repeat(2, 1fr); } }
 
+        .review-naam { width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid #e0ccb8; border-radius: 6px; font-size: 16px; font-family: inherit; margin: 4px 0 4px; }
+        .review-naam-uitleg { font-size: 0.8rem; color: var(--grijs); text-align: left; margin: 0 0 12px 0; }
         .privacy-tip { font-size: 0.75rem; color: var(--grijs); margin: 6px 0 0 0; line-height: 1.4; text-align: left; }
         .privacy-tip a, .voet-link { color: var(--azul); font-weight: bold; }
         .voet-link { display: inline-block; margin-top: 6px; }
@@ -515,6 +524,20 @@
         .mand-extra { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--rood); margin-bottom: 10px; }
 
         .verleng-knoppen { display: flex; flex-direction: column; gap: 8px; margin-top: 15px; }
+        #verleng-opties { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .verleng-stap-titel { text-align: left; font-weight: bold; font-size: 0.9rem; margin: 4px 0 6px; }
+        .verleng-duur { display: grid; grid-template-columns: repeat(auto-fit, minmax(64px, 1fr)); gap: 8px; margin-bottom: 8px; }
+        .verleng-duur button { margin: 0; padding: 10px 4px; border-radius: 8px; border: 2px solid #e0ccb8; background: white; font-weight: bold;
+                               font-size: 0.95rem; cursor: pointer; font-family: inherit; color: var(--inkt); }
+        .verleng-duur button.gekozen { border-color: var(--oliva); background: #f6f8ee; color: var(--oliva); }
+        .verleng-optie { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 14px 10px; border-radius: 10px; cursor: pointer;
+                         background: #fffdf8; border: 2px solid #e0ccb8; font-family: inherit; color: var(--inkt); margin: 0; }
+        .verleng-optie:hover { border-color: var(--oliva); background: #f6f8ee; }
+        .verleng-optie:disabled { opacity: 0.6; cursor: wait; }
+        .verleng-optie .optie-titel { font-weight: bold; font-size: 1rem; }
+        .verleng-optie .optie-uitleg { font-size: 0.75rem; color: var(--grijs); }
+        .verleng-optie .optie-prijs { font-weight: bold; color: var(--oliva); margin-top: 4px; }
+        @media (max-width: 380px) { #verleng-opties { grid-template-columns: 1fr; } }
         .verleng-secundair { background: #f2e3d3; border: 1px solid #e0ccb8; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold; color: var(--grijs); }
 
         /* ================= SPAANSE SFEER ================= */
@@ -752,8 +775,10 @@
             .mandje, .mand-achtergrond { transition: none; }
             .mand-balk.bump, .betaal-stap.bezig .stap-bol { animation: none; }
         }
+            .reservering-gevonden { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 3000; max-width: min(92vw, 520px);
+            background: #1e8449; color: white; padding: 14px 18px; border-radius: 12px; font-weight: bold; box-shadow: 0 8px 24px rgba(0,0,0,0.25); cursor: pointer; line-height: 1.4; }
     </style>
-    <script src="taal.js?v=20260928d" defer></script>
+    <script src="taal.js?v=20261007c" defer></script>
 </head>
 <body>
 
@@ -799,7 +824,7 @@
         <div class="modal-content">
             <h2>La Cuenta <span class="kop-ondertitel">Kies je betaalmethode</span></h2>
             <div id="rekening-overzicht" class="rekening"></div>
-            <div class="code-blok">
+            <div class="code-blok alleen-korting">
                 <p class="bon-titel">🎟️ Kortingscode of cadeaubon</p>
                 <div class="code-rij">
                     <input type="text" id="code-invoer" placeholder="Bijv. ZOMER10 of LT-XXXX-…" autocomplete="off" autocapitalize="characters"
@@ -809,7 +834,7 @@
                 <p id="code-melding" class="bon-uitleg"></p>
                 <div id="code-actief"></div>
             </div>
-            <button type="button" class="cadeau-koop-knop" onclick="openCadeauModal()">🎁 Cadeaubon kopen voor iemand anders</button>
+            <button type="button" class="cadeau-koop-knop alleen-korting" onclick="openCadeauModal()">🎁 Cadeaubon kopen voor iemand anders</button>
             <div class="bon-keuze">
                 <p class="bon-titel">🧾 Wil je een bon?</p>
                 <div class="bon-opties">
@@ -834,6 +859,18 @@
             </div>
             
             <button onclick="sluitBetaalModal()" style="background: #f2e3d3; border: 1px solid #e0ccb8; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; color: var(--grijs); margin-top: 10px;">Terug naar het menu</button>
+        </div>
+    </div>
+
+    <!-- Melding: drankjes zitten niet in het arrangement -->
+    <div id="drank-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <h2>🍷 Let op: drankjes betaal je apart</h2>
+            <p style="color: var(--grijs); font-size: 0.95rem;">Jullie arrangement is <strong>zonder drankjes</strong>. Deze drankjes komen daarom op de rekening:</p>
+            <div id="drank-regels" class="rekening" style="text-align: left;"></div>
+            <p id="drank-eerder" style="font-size: 0.85rem; color: var(--grijs); margin: 8px 0 16px;"></p>
+            <button class="bestel-knop" onclick="bevestigDrankBestelling()">Ja, bestellen</button>
+            <button onclick="document.getElementById('drank-modal').style.display='none'" style="background: none; border: none; color: var(--grijs); margin-top: 12px; cursor: pointer; font-weight: bold;">Terug naar het mandje</button>
         </div>
     </div>
 
@@ -934,6 +971,9 @@
                     <button type="button" data-ster="5" onclick="kiesSterren(5)" aria-label="5 sterren">★</button>
                 </div>
                 <p id="sterren-tekst" class="sterren-tekst">Tik op de sterren</p>
+                <label for="review-naam" class="opmerking-label" style="text-align: left;">Je naam bij de beoordeling (optioneel)</label>
+                <input type="text" id="review-naam" class="review-naam" maxlength="60" autocomplete="given-name" placeholder="Bijv. Maria" oninput="toonReviewNaam()">
+                <p class="review-naam-uitleg" id="review-naam-uitleg">👤 Je beoordeling verschijnt als <strong>Anoniem</strong>. Vul hierboven een naam in als je die erbij wilt.</p>
                 <label for="review-tekst" class="opmerking-label" style="text-align: left;">Wil je nog iets kwijt? (optioneel)</label>
                 <textarea id="review-tekst" class="opmerking-veld" maxlength="300" rows="3" placeholder="Wat vond je lekker, wat kan beter?"></textarea>
                 <p class="privacy-tip" style="margin: -6px 0 12px 0; text-align: left;">🔒 Je naam en deze tekst worden na een paar maanden gewist; de sterren bewaren we anoniem. <a href="privacy.php" target="_blank" rel="noopener">Privacyverklaring</a></p>
@@ -974,7 +1014,23 @@
             <h2 id="verleng-titel">Tijd verlengen</h2>
             <p id="verleng-tekst" style="line-height: 1.5;"></p>
             <div class="verleng-knoppen">
-                <button class="bestel-knop" id="verleng-knop" onclick="verlengTijd()">Verlengen</button>
+                <div id="verleng-duur-blok">
+                    <p class="verleng-stap-titel">1. Hoe lang?</p>
+                    <div id="verleng-duur" class="verleng-duur"></div>
+                    <p class="verleng-stap-titel">2. Wat willen jullie nog bestellen?</p>
+                </div>
+                <div id="verleng-opties">
+                    <button class="verleng-optie" id="verleng-alles" onclick="verlengTijd('alles')">
+                        <span class="optie-titel">🍽️ Eten + drinken</span>
+                        <span class="optie-uitleg">Gerechten en drankjes bestellen</span>
+                        <span class="optie-prijs" id="verleng-alles-prijs"></span>
+                    </button>
+                    <button class="verleng-optie" id="verleng-drank" onclick="verlengTijd('drank')">
+                        <span class="optie-titel">🍷 Alleen drankjes</span>
+                        <span class="optie-uitleg">Geen gerechten meer, wel drankjes</span>
+                        <span class="optie-prijs" id="verleng-drank-prijs"></span>
+                    </button>
+                </div>
                 <button class="verleng-secundair" id="verleng-afrekenen" onclick="sluitVerlengModal(); vraagRekening();">Afrekenen</button>
                 <button class="verleng-secundair" id="verleng-annuleer" onclick="sluitVerlengModal()">Niet nu</button>
             </div>
@@ -1017,14 +1073,18 @@
             <div id="tab-menu" class="tab-content active">
                 <div class="menu-sectie">
                     <h2>Nuestra Carta <span class="kop-ondertitel">Onze kaart · onbeperkt tapas</span></h2>
-                    <p class="allergie-info">⚠️ Allergie of dieetwens? Zet het in de opmerking bij je bestelling of vraag het personeel.</p>
+                    <div class="allergie-rij">
+                        <p class="allergie-info">⚠️ Allergie of dieetwens? Zet het in de opmerking bij je bestelling of vraag het personeel.</p>
+                        <label class="allergie-schakel"><input type="checkbox" id="toon-allergenen" onchange="zetAllergenen(this.checked)"> Allergieën</label>
+                    </div>
                     
                     <div class="categorie-balk">
                         <button class="cat-btn active" onclick="filterMenu('alles', this)">✨ Todo <small>alles</small></button>
-                        <button class="cat-btn" onclick="filterMenu('voorgerecht', this)">🫒 Entrantes <small>voorgerechten</small></button>
+                        <button class="cat-btn" onclick="filterMenu('voorgerecht', this)">🫒 Tapas frías <small>koud</small></button>
                         <button class="cat-btn" onclick="filterMenu('hoofdgerecht', this)">🔥 Tapas calientes <small>warm</small></button>
-                        <button class="cat-btn" onclick="filterMenu('drankje', this)">🍷 Bebidas <small>drankjes</small></button>
+                        <button class="cat-btn" onclick="filterMenu('specialiteit', this)">🥘 Especialidades <small>specialiteiten</small></button>
                         <button class="cat-btn" onclick="filterMenu('toetje', this)">🍮 Postres <small>toetjes</small></button>
+                        <button class="cat-btn" onclick="filterMenu('drankje', this)">🍷 Bebidas <small>drankjes</small></button>
                     </div>
 
                     <div class="menuraster" id="menu-raster"></div>
@@ -1070,8 +1130,7 @@
     <footer class="voet">
         <strong>¡Buen provecho!</strong>
         Las Tapas · Taberna española · Allergie of vraag? Tik op 🙋 bovenin.
-        <br><a href="cadeaubon.php" target="_blank" rel="noopener" class="voet-link">🎁 Saldo cadeaubon checken</a>
-        · <a href="privacy.php" target="_blank" rel="noopener" class="voet-link">🔒 Privacyverklaring</a>
+        <br><span class="alleen-korting"><a href="cadeaubon.php" target="_blank" rel="noopener" class="voet-link">🎁 Saldo cadeaubon checken</a> · </span><a href="privacy.php" target="_blank" rel="noopener" class="voet-link">🔒 Privacyverklaring</a>
     </footer>
 
     <!-- Alleen op de telefoon: balk onderin + donkere achtergrond achter het mandje -->
@@ -1185,7 +1244,7 @@
         // Geen of een verkeerde tafelcode: niet laten bestellen
         function toonOngeldigeCode() {
             if (document.getElementById('ongeldig-code')) return;
-            ['sessie-modal', 'betaal-modal', 'qr-modal', 'contant-modal', 'verleng-modal', 'roep-modal', 'aansluit-modal', 'cadeau-modal'].forEach(id =>
+            ['sessie-modal', 'betaal-modal', 'qr-modal', 'contant-modal', 'verleng-modal', 'roep-modal', 'aansluit-modal', 'cadeau-modal', 'drank-modal'].forEach(id =>
                 document.getElementById(id).style.display = 'none');
             const div = document.createElement('div');
             div.id = 'ongeldig-code';
@@ -1203,6 +1262,8 @@
                 .then(res => res.json())
                 .then(data => {
                     config = data;
+                    // Extra functie kortingscodes/cadeaubonnen alleen tonen als de baas hem heeft aangezet
+                    document.body.classList.toggle('korting-aan', !!data.korting_aan);
                     menuItems = (data.menu || []).map(m => ({
                         id: m.id, naam: m.naam, omschrijving: m.omschrijving,
                         categorie: m.categorie, prijs: Number(m.prijs) || 0, allergenen: m.allergenen || [],
@@ -1360,6 +1421,7 @@
                 if (data.succes && data.sessie) {
                     mijnSessie = data.sessie;
                     localStorage.setItem(`gast_sessie_tafel_${tafelNummer}`, mijnSessie);
+                    if (data.reservering) toonReserveringGevonden(data.reservering);
                 } else if (data.code === 'tafel_bezet') {
                     // Iemand anders heeft de tafel net aangemeld
                     wisLokaleSessie();
@@ -1369,6 +1431,30 @@
                 laadTafelInfo();
             })
             .catch(err => console.error('Fout bij bijwerken tafelstatus:', err));
+        }
+
+        // Allergieën bij de gerechten tonen of verbergen (de keuze wordt op dit apparaat onthouden)
+        function zetAllergenen(aan) {
+            document.body.classList.toggle('toon-allergenen', aan);
+            try { localStorage.setItem('toon_allergenen', aan ? '1' : '0'); } catch (e) {}
+        }
+        (function () {
+            let aan = false;
+            try { aan = localStorage.getItem('toon_allergenen') === '1'; } catch (e) {}
+            const vak = document.getElementById('toon-allergenen');
+            if (vak) vak.checked = aan;
+            document.body.classList.toggle('toon-allergenen', aan);
+        })();
+
+        // Gast heeft gereserveerd: kort laten zien dat we de reservering hebben gevonden
+        function toonReserveringGevonden(r) {
+            const balk = document.createElement('div');
+            balk.className = 'reservering-gevonden';
+            balk.innerHTML = `📅 <span>Welkom! We hebben je reservering gevonden</span> (<span data-geen-vertaling>${esc(r.nummer)}</span>).`
+                + (r.andere_tafel ? ` <span>Let op: je had tafel</span> <span data-geen-vertaling>${esc(r.tafels)}</span> <span>gereserveerd. Geen probleem, de bediening weet ervan.</span>` : '');
+            balk.addEventListener('click', () => balk.remove());
+            document.body.appendChild(balk);
+            setTimeout(() => balk.remove(), 9000);
         }
 
         // ===== Welkom, aansluiten en afgesloten bezoek =====
@@ -1476,6 +1562,13 @@
                         return null;
                     }
 
+                    // Heeft de baas de naam van ons arrangement aangepast? Dan de nieuwe naam overnemen
+                    if (tafelInfo && tafelInfo.pakket && gekozenPakket && tafelInfo.pakket !== gekozenPakket) {
+                        gekozenPakket = tafelInfo.pakket;
+                        localStorage.setItem(`gast_pakket_tafel_${tafelNummer}`, gekozenPakket);
+                        updateHeaderInfo();
+                    }
+
                     updateTijdBalk();
                     updateRondeInfo();
                     updateOproepBalk();
@@ -1543,8 +1636,17 @@
                 return;
             }
 
-            knop.style.display = 'inline-block';
-            if (tafelInfo.seconden_over > 0) {
+            knop.style.display = config && config.verleng_aan === false ? 'none' : 'inline-block';
+            const alleenDrank = tafelInfo.eten_tot_kort && tafelInfo.eten_tot_kort !== tafelInfo.eind_tijd_kort;
+            if (tafelInfo.seconden_over > 0 && alleenDrank && tafelInfo.eten_seconden_over <= 0) {
+                tekst.innerHTML = `🍷 Alleen drankjes tot <strong>${esc(tafelInfo.eind_tijd_kort)}</strong> <small>(de tijd voor gerechten is voorbij)</small>`;
+                balk.classList.remove('op');
+                tijdOpGetoond = false;
+            } else if (tafelInfo.seconden_over > 0 && alleenDrank) {
+                tekst.innerHTML = `🍽️ Gerechten tot <strong>${esc(tafelInfo.eten_tot_kort)}</strong> · 🍷 drankjes tot <strong>${esc(tafelInfo.eind_tijd_kort)}</strong>`;
+                balk.classList.remove('op');
+                tijdOpGetoond = false;
+            } else if (tafelInfo.seconden_over > 0) {
                 tekst.innerHTML = `🕘 Jullie kunnen dineren tot <strong>${esc(tafelInfo.eind_tijd_kort)}</strong>`;
                 balk.classList.remove('op');
                 tijdOpGetoond = false;
@@ -1569,26 +1671,73 @@
             return config.verleng_prijs_pp * aantalPersonen();
         }
 
+        // "12:54" + 15 -> "13:09" (over middernacht heen gaat het ook goed)
+        function plusMinuten(hhmm, min) {
+            const [u, m] = hhmm.split(':').map(Number);
+            const totaal = (u * 60 + m + min) % (24 * 60);
+            return String(Math.floor(totaal / 60)).padStart(2, '0') + ':' + String(totaal % 60).padStart(2, '0');
+        }
+        // Huidige tijd volgens de server (eindtijd min de resterende seconden)
+        function serverNuKort() {
+            if (!tafelInfo || !tafelInfo.eind_tijd_kort || tafelInfo.seconden_over === null) {
+                return new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+            }
+            return plusMinuten(tafelInfo.eind_tijd_kort, -Math.round(tafelInfo.seconden_over / 60) + 24 * 60);
+        }
+
+        // Gekozen verlengtijd (15, 30, 45 of 60 minuten; de baas stelt de stappen in)
+        let gekozenVerlengMin = 0;
+        let verlengTijdOp = false;
+
+        function kiesVerlengDuur(min) {
+            gekozenVerlengMin = min;
+            toonVerlengKeuze();
+        }
+
+        // Teksten en prijzen in het venster bijwerken voor de gekozen tijd
+        function toonVerlengKeuze() {
+            const min = gekozenVerlengMin;
+            const personen = aantalPersonen();
+            const blok = config.verleng_minuten || 30;       // de prijzen gelden per zoveel minuten
+            const factor = min / blok;
+
+            // Nieuwe eindtijd: de extra minuten komen bovenop de huidige eindtijd (zo verliezen jullie geen tijd).
+            // Is de tijd al om, dan tellen ze vanaf nu. We rekenen met de klok van de server, niet die van de telefoon.
+            const huidigKort = tafelInfo.eind_tijd_kort;
+            const nieuwKort = plusMinuten(verlengTijdOp || !huidigKort ? serverNuKort() : huidigKort, min);
+
+            document.querySelectorAll('#verleng-duur button').forEach(b => b.classList.toggle('gekozen', Number(b.dataset.min) === min));
+            document.getElementById('verleng-tekst').innerHTML = (verlengTijdOp
+                ? `We hopen dat het heeft gesmaakt! Willen jullie nog wat langer blijven?<br><br>Met ${min} minuten extra kunnen jullie blijven tot <strong>${nieuwKort}</strong>.`
+                : `Jullie tijd loopt nu tot <strong>${esc(huidigKort)}</strong>. Met ${min} minuten extra wordt dat <strong>${nieuwKort}</strong>.`) +
+                `<br>Kies wat jullie in die tijd nog willen bestellen (prijs voor ${personen} ${personen === 1 ? 'persoon' : 'personen'}):`;
+            const prijsHtml = pp => `${euro(pp * factor * personen)} <small style="font-weight: normal; color: var(--grijs);">(${euro(pp * factor)} p.p.)</small>`;
+            document.getElementById('verleng-alles-prijs').innerHTML = prijsHtml(config.verleng_prijs_pp);
+            document.getElementById('verleng-drank-prijs').innerHTML = prijsHtml(config.verleng_prijs_drank_pp);
+        }
+
         function openVerlengModal(tijdOp) {
             if (!config || !tafelInfo) return;
-            const min = config.verleng_minuten;
-            const pp = euro(config.verleng_prijs_pp);
-            const totaal = euro(verlengPrijsTotaal());
-
-            // Nieuwe eindtijd uitrekenen (vanaf de huidige eindtijd, of vanaf nu als die voorbij is)
-            const basis = Math.max(Date.now(), Date.now() + (tafelInfo.seconden_over || 0) * 1000);
-            const nieuw = new Date(basis + min * 60000);
-            const nieuwKort = nieuw.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+            verlengTijdOp = tijdOp;
 
             document.getElementById('verleng-titel').innerText = tijdOp ? 'Jullie tijd zit erop' : 'Tijd verlengen';
-            document.getElementById('verleng-tekst').innerHTML = (tijdOp
-                ? 'We hopen dat het heeft gesmaakt! Willen jullie nog wat langer blijven?<br><br>'
-                : '') +
-                `Verlengen met <strong>${min} minuten</strong> kost ${pp} per persoon. ` +
-                `Voor jullie ${aantalPersonen()} ${aantalPersonen() === 1 ? 'persoon' : 'personen'} is dat <strong>${totaal}</strong>. ` +
-                `Jullie kunnen dan dineren tot <strong>${nieuwKort}</strong>.`;
-            document.getElementById('verleng-knop').innerText = `Verlengen met ${min} min (${totaal})`;
-            document.getElementById('verleng-afrekenen').style.display = tijdOp ? 'block' : 'none';
+            const opties = document.getElementById('verleng-opties');
+            const duurBlok = document.getElementById('verleng-duur-blok');
+            if (!config.verleng_aan) {
+                // De baas heeft verlengen uitgezet: alleen nog afrekenen
+                opties.style.display = 'none';
+                duurBlok.style.display = 'none';
+                document.getElementById('verleng-tekst').innerHTML = 'We hopen dat het heeft gesmaakt! Verlengen is vandaag niet mogelijk. Jullie kunnen nu afrekenen.';
+            } else {
+                opties.style.display = '';
+                duurBlok.style.display = '';
+                const keuzes = config.verleng_keuzes && config.verleng_keuzes.length ? config.verleng_keuzes : [config.verleng_minuten || 30];
+                document.getElementById('verleng-duur').innerHTML = keuzes.map(m =>
+                    `<button type="button" data-min="${m}" onclick="kiesVerlengDuur(${m})">${m} min</button>`).join('');
+                if (!keuzes.includes(gekozenVerlengMin)) gekozenVerlengMin = keuzes.includes(30) ? 30 : keuzes[0];
+                toonVerlengKeuze();
+            }
+            document.getElementById('verleng-afrekenen').style.display = (tijdOp || !config.verleng_aan) ? 'block' : 'none';
             document.getElementById('verleng-annuleer').innerText = tijdOp ? 'Terug naar het menu' : 'Niet nu';
             document.getElementById('verleng-melding').innerText = '';
             document.getElementById('verleng-modal').style.display = 'flex';
@@ -1598,29 +1747,31 @@
             document.getElementById('verleng-modal').style.display = 'none';
         }
 
-        function verlengTijd() {
-            const knop = document.getElementById('verleng-knop');
-            knop.disabled = true;
+        function verlengTijd(soort) {
+            const knoppen = document.querySelectorAll('.verleng-optie');
+            knoppen.forEach(k => k.disabled = true);
             fetch('bestelling.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ actie: 'verleng', tafel: parseInt(tafelNummer) })
+                body: JSON.stringify({ actie: 'verleng', tafel: parseInt(tafelNummer), soort: soort, minuten: gekozenVerlengMin })
             })
             .then(res => res.json())
             .then(data => {
-                knop.disabled = false;
+                knoppen.forEach(k => k.disabled = false);
                 if (data.succes) {
                     tafelInfo = data.tafel;
                     tijdOpGetoond = false;
                     updateTijdBalk();
                     sluitVerlengModal();
-                    toonBalkMelding(`✅ Verlengd tot ${tafelInfo.eind_tijd_kort}`);
+                    toonBalkMelding(soort === 'drank'
+                        ? `✅ Drankjes verlengd tot ${tafelInfo.eind_tijd_kort}`
+                        : `✅ Verlengd tot ${tafelInfo.eind_tijd_kort}`);
                 } else {
                     document.getElementById('verleng-melding').innerText = data.melding || 'Verlengen is niet gelukt.';
                 }
             })
             .catch(() => {
-                knop.disabled = false;
+                knoppen.forEach(k => k.disabled = false);
                 document.getElementById('verleng-melding').innerText = 'Kan de server niet bereiken.';
             });
         }
@@ -1671,11 +1822,20 @@
             reviewGetoond = true;
             if (betaalPollInterval) { clearInterval(betaalPollInterval); betaalPollInterval = null; }
             if (oproepPollTimer) { clearInterval(oproepPollTimer); oproepPollTimer = null; }
-            ['sessie-modal', 'betaal-modal', 'qr-modal', 'contant-modal', 'verleng-modal', 'roep-modal', 'aansluit-modal', 'cadeau-modal'].forEach(id =>
+            ['sessie-modal', 'betaal-modal', 'qr-modal', 'contant-modal', 'verleng-modal', 'roep-modal', 'aansluit-modal', 'cadeau-modal', 'drank-modal'].forEach(id =>
                 document.getElementById(id).style.display = 'none');
             sluitMandSheet();
             wisLokaleSessie();
             document.getElementById('review-modal').style.display = 'flex';
+        }
+
+        // Laat de gast zien onder welke naam de beoordeling verschijnt (leeg = Anoniem)
+        function toonReviewNaam() {
+            const naam = document.getElementById('review-naam').value.trim();
+            const el = document.getElementById('review-naam-uitleg');
+            el.innerHTML = naam
+                ? `👤 Je beoordeling verschijnt als <strong data-geen-vertaling>${esc(naam)}</strong>.`
+                : '👤 Je beoordeling verschijnt als <strong>Anoniem</strong>. Vul hierboven een naam in als je die erbij wilt.';
         }
 
         function kiesSterren(n) {
@@ -1695,7 +1855,8 @@
                     actie: 'review',
                     tafel: parseInt(tafelNummer),
                     sterren: gekozenSterren,
-                    tekst: document.getElementById('review-tekst').value.trim()
+                    tekst: document.getElementById('review-tekst').value.trim(),
+                    naam: document.getElementById('review-naam').value.trim()
                 })
             })
             .then(res => res.json())
@@ -2061,7 +2222,7 @@
 
         // Scherm "op slot" zolang de betaling loopt (contant of online-controle)
         function toonBetaalSlot(info) {
-            ['sessie-modal', 'betaal-modal', 'qr-modal', 'verleng-modal', 'roep-modal', 'aansluit-modal', 'cadeau-modal'].forEach(id =>
+            ['sessie-modal', 'betaal-modal', 'qr-modal', 'verleng-modal', 'roep-modal', 'aansluit-modal', 'cadeau-modal', 'drank-modal'].forEach(id =>
                 document.getElementById(id).style.display = 'none');
             document.getElementById('contant-modal').style.display = 'flex';
             sluitMandSheet();
@@ -2160,10 +2321,11 @@
             }
 
             const categorieNamen = {
-                voorgerecht: '🫒 Entrantes <small>voorgerechten</small>',
+                voorgerecht: '🫒 Tapas frías <small>koude tapas</small>',
                 hoofdgerecht: '🔥 Tapas calientes <small>warme tapas</small>',
-                drankje: '🍷 Bebidas <small>drankjes</small>',
-                toetje: '🍮 Postres <small>toetjes</small>'
+                specialiteit: '🥘 Especialidades <small>specialiteiten</small>',
+                toetje: '🍮 Postres <small>toetjes</small>',
+                drankje: '🍷 Bebidas <small>drankjes</small>'
             };
             let vorigeCategorie = null;
 
@@ -2306,11 +2468,19 @@
             updateRondeInfo();
         }
 
+        // Verlengd met alleen drankjes en de tijd voor gerechten is voorbij?
+        function etenTijdOm() {
+            return tafelInfo && tafelInfo.eten_tot_kort && tafelInfo.eten_tot_kort !== tafelInfo.eind_tijd_kort && tafelInfo.eten_seconden_over <= 0;
+        }
+
         function updateBestelKnop() {
             const knop = document.getElementById('bestel-knop');
             const leeg = Object.keys(mandje).length === 0;
-            knop.disabled = leeg || tijdIsOm();
-            knop.innerText = tijdIsOm() ? 'Tijd is om: verleng om te bestellen' : '¡Pedir Ahora! (Bestel)';
+            const geenEten = !tijdIsOm() && etenTijdOm() && etenInMandje() > 0;
+            knop.disabled = leeg || tijdIsOm() || geenEten;
+            knop.innerText = tijdIsOm() ? (config && config.verleng_aan === false ? 'Tijd is om' : 'Tijd is om: verleng om te bestellen')
+                           : geenEten ? 'Alleen drankjes: haal de gerechten uit je mandje'
+                           : '¡Pedir Ahora! (Bestel)';
         }
 
         // ===== Telefoon: balk onderin en mandje als onderblad =====
@@ -2363,7 +2533,40 @@
 
         document.addEventListener('keydown', e => { if (e.key === 'Escape') sluitMandSheet(); });
 
+        // Arrangement zonder drank? Dan eerst laten zien wat de drankjes in deze bestelling kosten.
         function plaatsBestelling() {
+            if (drankjesBetaald()) {
+                const regels = [];
+                let totaal = 0;
+                for (let id in mandje) {
+                    const item = menuItems.find(p => p.id === id);
+                    const prijs = item ? drankPrijs(item.naam) : undefined;
+                    if (!item || item.categorie !== 'drankje' || prijs === undefined) continue;
+                    const bedrag = prijs * mandje[id];
+                    totaal += bedrag;
+                    regels.push(`<div class="rekening-regel"><span>${mandje[id]}× <span data-geen-vertaling>${esc(item.naam)}</span> <small style="color: var(--grijs);">(${euro(prijs)} p.st.)</small></span><span>${euro(bedrag)}</span></div>`);
+                }
+                if (regels.length) {
+                    const eerder = tafelInfo ? Number(tafelInfo.drank_kosten || 0) : 0;
+                    document.getElementById('drank-regels').innerHTML = regels.join('')
+                        + `<div class="rekening-totaal"><span>Drankjes in deze bestelling</span><span>${euro(totaal)}</span></div>`;
+                    document.getElementById('drank-eerder').innerHTML = eerder > 0
+                        ? `Totaal aan drankjes op de rekening, samen met eerdere bestellingen: <strong>${euro(eerder + totaal)}</strong>`
+                        : `Dit bedrag komt bij jullie rekening en betaal je bij het afrekenen.`;
+                    sluitMandSheet();
+                    document.getElementById('drank-modal').style.display = 'flex';
+                    return;
+                }
+            }
+            verstuurBestelling();
+        }
+
+        function bevestigDrankBestelling() {
+            document.getElementById('drank-modal').style.display = 'none';
+            verstuurBestelling();
+        }
+
+        function verstuurBestelling() {
             let bestellingTekstOmschrijving = [];
             for (let id in mandje) {
                 const item = menuItems.find(p => p.id === id);

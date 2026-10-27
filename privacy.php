@@ -26,18 +26,18 @@ $bijgewerkt = '28-09-2026';
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,800&display=swap" rel="stylesheet">
-    <script src="taal.js?v=20260928d" defer></script>
+    <script src="taal.js?v=20261007c" defer></script>
     <style>
         :root { --rood: #a8232b; --creme: #fbf5ea; --inkt: #2b1d19; --grijs: #786a63; --azul: #1f4e8c; --lijn: #ecdcc8;
             --tegel: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Crect width='28' height='28' fill='%23fdf6e3'/%3E%3Cpath d='M14 3C17 9 19 11 25 14C19 17 17 19 14 25C11 19 9 17 3 14C9 11 11 9 14 3Z' fill='%231f4e8c'/%3E%3Ccircle cx='14' cy='14' r='3' fill='%23e9a23b'/%3E%3Cpath d='M0 0h5v5H0zM23 0h5v5h-5zM0 23h5v5H0zM23 23h5v5h-5z' fill='%231f4e8c' opacity='.5'/%3E%3C/svg%3E"); }
         * { box-sizing: border-box; }
         body { margin: 0; background: var(--creme); color: var(--inkt); font-family: 'Segoe UI', Tahoma, sans-serif; line-height: 1.6; }
         header { background: linear-gradient(135deg, #b52a31, #8e1c23); color: white; padding: 16px 20px; position: relative; margin-bottom: 14px;
-                 display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+                 display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: nowrap; }
         header::after { content: ''; position: absolute; left: 0; right: 0; bottom: -14px; height: 14px; background: var(--tegel) repeat-x; background-size: 14px 14px; }
-        header strong { font-family: 'Fraunces', Georgia, serif; font-size: 1.4rem; }
+        header strong { font-family: 'Fraunces', Georgia, serif; font-size: 1.4rem; white-space: nowrap; }
         .kop-rechts { display: flex; gap: 8px; align-items: center; }
-        .terug { color: white; text-decoration: none; font-weight: bold; font-size: 0.9rem; border: 1px solid rgba(255,255,255,0.5); padding: 6px 12px; border-radius: 16px; }
+        .terug { white-space: nowrap; color: white; text-decoration: none; font-weight: bold; font-size: 0.9rem; border: 1px solid rgba(255,255,255,0.5); padding: 6px 12px; border-radius: 16px; }
         main { max-width: 760px; margin: 0 auto; padding: 24px 18px 50px; }
         h1 { font-family: 'Fraunces', Georgia, serif; color: var(--rood); margin: 0 0 4px; font-size: 2rem; line-height: 1.2; }
         h2 { font-family: 'Fraunces', Georgia, serif; color: var(--rood); font-size: 1.25rem; margin: 28px 0 8px; }
@@ -104,8 +104,9 @@ $bijgewerkt = '28-09-2026';
                     <tr><td>E-mailadres (alleen als je een bon per e-mail kiest)</td><td data-label="Waarom">Je bon naar je toe sturen</td><td data-label="Hoe lang">Gewist uit ons systeem zodra jullie tafel wordt afgesloten. De verstuurde bon staat nog in de map Verzonden van de restaurant-mail</td></tr>
                     <tr><td>Kortingscode of cadeaubon die je gebruikt</td><td data-label="Waarom">Korting of tegoed verrekenen op je rekening</td><td data-label="Hoe lang">Het bedrag staat op de rekening (<?php echo $jaren; ?> jaar). De code zelf wordt niet aan je naam gekoppeld</td></tr>
                     <tr><td>Cadeaubon die je koopt: bedrag, saldo, en als je dat invult de naam van de ontvanger en een boodschap</td><td data-label="Waarom">De cadeaubon maken en het tegoed bijhouden</td><td data-label="Hoe lang">Zolang er tegoed op staat. Naam en boodschap: <?php echo $maanden; ?> maanden nadat het tegoed op is. Niet betaalde bonnen: na 1 dag verwijderd</td></tr>
-                    <tr><td>Beoordeling (sterren en tekst)</td><td data-label="Waarom">Onze service verbeteren</td><td data-label="Hoe lang">Tekst: <?php echo $maanden; ?> maanden. Sterren: anoniem <?php echo $jaren; ?> jaar</td></tr>
+                    <tr><td>Beoordeling (sterren, tekst en de naam die je er zelf bij zet; zonder naam staat er Anoniem)</td><td data-label="Waarom">Onze service verbeteren</td><td data-label="Hoe lang">Tekst en naam: <?php echo $maanden; ?> maanden. Sterren: anoniem <?php echo $jaren; ?> jaar</td></tr>
                     <tr><td>Hulpvraag aan de bediening (onderwerp en toelichting)</td><td data-label="Waarom">Je snel helpen</td><td data-label="Hoe lang">Gewist zodra de serveerster hem heeft afgehandeld</td></tr>
+                    <tr><td>Reservering: naam, e-mailadres, telefoonnummer, datum, tijd, tafel, aantal personen en een eventuele opmerking</td><td data-label="Waarom">Je reservering vastleggen, je een bevestiging mailen, je bellen of mailen als er iets verandert en je bij binnenkomst herkennen</td><td data-label="Hoe lang"><?php echo $maanden; ?> maanden na de datum van de reservering, daarna helemaal verwijderd. Geannuleerde reserveringen: 15 minuten na het annuleren verwijderd</td></tr>
                 </tbody>
             </table></div>
 
@@ -175,8 +176,9 @@ $bijgewerkt = '28-09-2026';
                     <tr><td>Email address (only if you choose an emailed receipt)</td><td data-label="Why">To send you your receipt</td><td data-label="How long">Deleted from our system as soon as your table is closed. The sent receipt remains in the restaurant's Sent mail folder</td></tr>
                     <tr><td>Discount code or gift card you use</td><td data-label="Why">To apply the discount or balance to your bill</td><td data-label="How long">The amount is on the bill (<?php echo $jaren; ?> years). The code itself is not linked to your name</td></tr>
                     <tr><td>Gift card you buy: amount, balance and, if you fill it in, the recipient's name and a message</td><td data-label="Why">To create the gift card and keep track of the balance</td><td data-label="How long">As long as there is a balance. Name and message: <?php echo $maanden; ?> months after the balance is used up. Unpaid cards: deleted after 1 day</td></tr>
-                    <tr><td>Review (stars and text)</td><td data-label="Why">To improve our service</td><td data-label="How long">Text: <?php echo $maanden; ?> months. Stars: anonymously for <?php echo $jaren; ?> years</td></tr>
+                    <tr><td>Review (stars, text and the name you add yourself; without a name it shows as Anonymous)</td><td data-label="Why">To improve our service</td><td data-label="How long">Text and name: <?php echo $maanden; ?> months. Stars: anonymously for <?php echo $jaren; ?> years</td></tr>
                     <tr><td>Request for help (topic and details)</td><td data-label="Why">To help you quickly</td><td data-label="How long">Deleted as soon as the waiter has handled it</td></tr>
+                    <tr><td>Reservation: name, email address, phone number, date, time, table, number of people and an optional note</td><td data-label="Why">To record your reservation, email you a confirmation, call or email you if something changes and recognise you when you arrive</td><td data-label="How long"><?php echo $maanden; ?> months after the date of the reservation, then deleted completely. Cancelled reservations: deleted 15 minutes after cancelling</td></tr>
                 </tbody>
             </table></div>
 
@@ -246,8 +248,9 @@ $bijgewerkt = '28-09-2026';
                     <tr><td>Correo electrónico (solo si eliges el recibo por correo)</td><td data-label="Para qué">Enviarte el recibo</td><td data-label="Cuánto tiempo">Se borra de nuestro sistema al cerrar vuestra mesa. El recibo enviado queda en la carpeta de enviados del correo del restaurante</td></tr>
                     <tr><td>Código de descuento o tarjeta regalo que usas</td><td data-label="Para qué">Aplicar el descuento o el saldo a tu cuenta</td><td data-label="Cuánto tiempo">El importe figura en la cuenta (<?php echo $jaren; ?> años). El código no se vincula a tu nombre</td></tr>
                     <tr><td>Tarjeta regalo que compras: importe, saldo y, si lo rellenas, el nombre del destinatario y un mensaje</td><td data-label="Para qué">Crear la tarjeta regalo y controlar el saldo</td><td data-label="Cuánto tiempo">Mientras quede saldo. Nombre y mensaje: <?php echo $maanden; ?> meses después de agotarse el saldo. Tarjetas no pagadas: se borran después de 1 día</td></tr>
-                    <tr><td>Valoración (estrellas y texto)</td><td data-label="Para qué">Mejorar nuestro servicio</td><td data-label="Cuánto tiempo">Texto: <?php echo $maanden; ?> meses. Estrellas: de forma anónima <?php echo $jaren; ?> años</td></tr>
+                    <tr><td>Valoración (estrellas, texto y el nombre que pongas tú; sin nombre aparece como Anónimo)</td><td data-label="Para qué">Mejorar nuestro servicio</td><td data-label="Cuánto tiempo">Texto y nombre: <?php echo $maanden; ?> meses. Estrellas: de forma anónima <?php echo $jaren; ?> años</td></tr>
                     <tr><td>Solicitud de ayuda (tema y detalles)</td><td data-label="Para qué">Ayudarte rápidamente</td><td data-label="Cuánto tiempo">Se borra en cuanto el camarero la atiende</td></tr>
+                    <tr><td>Reserva: nombre, correo electrónico, teléfono, fecha, hora, mesa, número de personas y una nota opcional</td><td data-label="Para qué">Registrar tu reserva, enviarte una confirmación, llamarte o escribirte si algo cambia y reconocerte al llegar</td><td data-label="Cuánto tiempo"><?php echo $maanden; ?> meses después de la fecha de la reserva; luego se borra por completo. Reservas canceladas: se borran 15 minutos después de cancelarlas</td></tr>
                 </tbody>
             </table></div>
 
